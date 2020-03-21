@@ -7,10 +7,10 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "TimerManager.h"
 
-
+// Sets default values
 ADCharacter::ADCharacter()
 {
- 	
+ 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	SpringArmComp = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArmComp"));
 	SpringArmComp->bUsePawnControlRotation = true;
@@ -21,21 +21,15 @@ ADCharacter::ADCharacter()
 	CameraComp = CreateDefaultSubobject<UCameraComponent>(TEXT("CamerComp"));
 	CameraComp->SetupAttachment(SpringArmComp);
 
-	//Initialing components
-	DefaultWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
-	SprintSpeedMultiplier = 2.0f;
-	ProneSpeedMultiplier = 5.0f;
-	BeginProneAnimTime = 1.7f;
-	EndProneAnimTime = 1.5f;
-	bProne = false;
-	bProning = false;
 }
 
 // Called when the game starts or when spawned
 void ADCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	bProning=false;
+	bProne=false;
+SprintValue=2;
 	
 }
 
@@ -62,11 +56,7 @@ void ADCharacter::EndCrouch()
 void ADCharacter::BeginProne()
 {
 	bProning=true;
-	if (GetCharacterMovement()->MaxWalkSpeed >DefaultWalkSpeed)
-		GetCharacterMovement()->MaxWalkSpeed = DefaultWalkSpeed;
-	GetCharacterMovement()->MaxWalkSpeed /= ProneSpeedMultiplier;
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, FString::Printf(TEXT("prone!!")));
-	GetWorld()->GetTimerManager().SetTimer(InputTimeHandle,this, &ADCharacter::ProneDown, BeginProneAnimTime, false);
+	GetWorld()->GetTimerManager().SetTimer(InputTimeHandle,this, &ADCharacter::ProneDown, 1.7f, true);
 	//@TODO stand to prone should not get cancelled
 }
 
@@ -78,8 +68,6 @@ void ADCharacter::ProneDown()
 void ADCharacter::StandUp()
 {
 		bProne=false  ;
-		GetCharacterMovement()->MaxWalkSpeed = DefaultWalkSpeed;
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, FString::Printf(TEXT("walking!!")));
 }
 
 
@@ -90,7 +78,7 @@ void ADCharacter::EndProne()
 		bProne=true;
 	bProning=false;
 	
-	GetWorld()->GetTimerManager().SetTimer(InputTimeHandle,this, &ADCharacter::StandUp, BeginProneAnimTime, false);
+	GetWorld()->GetTimerManager().SetTimer(InputTimeHandle,this, &ADCharacter::StandUp, 1.5f, true);
 }
 
 void ADCharacter::BeginZoom()
@@ -105,29 +93,24 @@ void ADCharacter::EndZoom()
 
 void ADCharacter::BeginSprint()
 {
-	if(!bProning)
-		GetCharacterMovement()->MaxWalkSpeed *= SprintSpeedMultiplier;
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, FString::Printf(TEXT("multiplied!!")));
+	GetCharacterMovement()->MaxWalkSpeed *= SprintValue;
 }
 
 void ADCharacter::EndSprint()
 {
-	if(!bProning)
-		GetCharacterMovement()->MaxWalkSpeed = DefaultWalkSpeed;
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Called!!")));
-	//UE_LOG(LogTemp, Warning, TEXT("Speed= %f"), speed);
-	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Speed: %f"), speed));
+	float speed=GetCharacterMovement()->MaxWalkSpeed /= SprintValue;
+	UE_LOG(LogTemp, Warning, TEXT("Speed= %f"), speed);
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Speed: %f"), speed));
 }
 
 // Called every frame
 void ADCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	auto speed= GetCharacterMovement()->MaxWalkSpeed;
-	// GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Speed: %f"), speed));
+
 }
 
-
+// Called to bind functionality to input
 void ADCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);

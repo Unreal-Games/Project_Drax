@@ -16,16 +16,16 @@ class PROJECTDRAX_API ADCharacter : public ACharacter
 	GENERATED_BODY()
 
 public:
-	
+	// Sets default values for this character's properties
 	ADCharacter();
 
 protected:
-	
+	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	//Movement Functions
 	void MoveForward(float Value);
 	
+
 	void MoveRight(float Value);
 
 	void BeginCrouch();
@@ -33,12 +33,10 @@ protected:
 	void EndCrouch();
 
 	void BeginProne();
-
-	UFUNCTION()
-	void ProneDown();
-
-	UFUNCTION()
-	void StandUp();
+UFUNCTION()
+void ProneDown();
+UFUNCTION()
+void StandUp();
 
 	void EndProne();
 
@@ -46,52 +44,34 @@ protected:
 
 	void EndSprint();
 
+	
 
-	//ADS functions
 	void BeginZoom();
 
 	void EndZoom();
 
-
-	//TimeHandle for animation
 	FTimerHandle InputTimeHandle;
 
 
-	//Default variables
-	UPROPERTY(BlueprintReadOnly, Category = "Movement")
-		float DefaultWalkSpeed;
+UPROPERTY(BlueprintReadOnly,Category="prone")
+bool bProne;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Movement")
-		float ProneSpeedMultiplier;
+UPROPERTY(BlueprintReadOnly,Category="prone")
+bool bProning;
 
-	UPROPERTY(BlueprintReadOnly,Category="Movement")
-		bool bProne;
+UPROPERTY(BlueprintReadOnly,Category="prone")
+float SprintValue;
 
-	UPROPERTY(BlueprintReadOnly,Category="Movement")
-		bool bProning;
-
-	UPROPERTY(BlueprintReadOnly,Category="Movement")
-		float SprintSpeedMultiplier;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Movement")
-		float BeginProneAnimTime;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Movement")
-		float EndProneAnimTime;
-
-
-	//Components
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		UCameraComponent* CameraComp;
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		USpringArmComponent* SpringArmComp;
 
 public:	
-	
+	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	
+	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 };
