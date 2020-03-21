@@ -3,6 +3,10 @@
 
 #include "DCharacter.h"
 #include "Camera/CameraComponent.h"
+#include "Components/InputComponent.h"
+#include "Engine/Engine.h"
+#include "Engine/World.h"
+#include "DWeapon.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "TimerManager.h"
@@ -21,12 +25,27 @@ ADCharacter::ADCharacter()
 	CameraComp = CreateDefaultSubobject<UCameraComponent>(TEXT("CamerComp"));
 	CameraComp->SetupAttachment(SpringArmComp);
 
+	WeaponAttachSocketName = "GunSocket";
 }
 
 // Called when the game starts or when spawned
 void ADCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	FVector Loc = GetMesh()->GetSocketLocation("GunSocket");
+	FRotator Rot = GetControlRotation();
+	UE_LOG(LogTemp,Warning,TEXT("Location:%s\nRotation%s"),*(Loc.ToString()),*(Rot.ToString()))
+	CurrentWeapon = GetWorld()->SpawnActor<ADWeapon>(StarterWeaponClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+	if (CurrentWeapon)
+	{
+		CurrentWeapon->SetOwner(this);
+		CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachSocketName);
+		UE_LOG(LogTemp, Warning, TEXT("Socket:%s"), *(WeaponAttachSocketName.ToString()))
+	}
+	
 	bProning=false;
 	bProne=false;
 SprintValue=2;
@@ -46,6 +65,11 @@ void ADCharacter::MoveRight(float Value)
 void ADCharacter::BeginCrouch()
 {
 	Crouch();
+}
+
+void ADCharacter::BeginFire()
+{
+	CurrentWeapon->Fire();
 }
 
 void ADCharacter::EndCrouch()
@@ -130,6 +154,8 @@ void ADCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindAction("Prone", IE_Pressed, this, &ADCharacter::BeginProne);
 	PlayerInputComponent->BindAction("Prone", IE_Released, this, &ADCharacter::EndProne);
 
+	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ADCharacter::BeginFire);
+	
 	PlayerInputComponent->BindAction("Sprint", IE_Pressed, this, &ADCharacter::BeginSprint);
 	PlayerInputComponent->BindAction("Sprint", IE_Released, this, &ADCharacter::EndSprint);
 

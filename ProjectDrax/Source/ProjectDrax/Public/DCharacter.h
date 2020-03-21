@@ -30,6 +30,8 @@ protected:
 
 	void BeginCrouch();
 
+	void BeginFire();
+
 	void EndCrouch();
 
 	void BeginProne();
@@ -70,6 +72,16 @@ float SprintValue;
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Spawn")
+		TSubclassOf<AActor> ActorToSpawn;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Player")
+		TSubclassOf<AActor> StarterWeaponClass;
+
+	UPROPERTY(VisibleDefaultsOnly, Category = "Player")
+		FName WeaponAttachSocketName;
+	class ADWeapon* CurrentWeapon;
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;

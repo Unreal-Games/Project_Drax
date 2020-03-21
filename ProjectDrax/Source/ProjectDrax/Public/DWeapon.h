@@ -15,6 +15,15 @@ public:
 	// Sets default values for this actor's properties
 	ADWeapon();
 
+	UPROPERTY()
+		USceneComponent* Root;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class USkeletalMeshComponent* MeshComp;
+	void Fire();
+
+	UPROPERTY(EditDefaultsOnly, Category = "Spawn")
+		TSubclassOf<AActor> ActorToSpawn;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
