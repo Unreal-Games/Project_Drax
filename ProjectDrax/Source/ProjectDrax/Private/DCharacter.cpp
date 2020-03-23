@@ -3,13 +3,16 @@
 
 #include "DCharacter.h"
 #include "Camera/CameraComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "DWeapon.h"
+#include "ProjectDrax.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "TimerManager.h"
+#include "UnrealNetwork.h"
 
 // Sets default values
 ADCharacter::ADCharacter()
@@ -21,6 +24,9 @@ ADCharacter::ADCharacter()
 	SpringArmComp->SetupAttachment(RootComponent);
 
 	GetMovementComponent()->GetNavAgentPropertiesRef().bCanCrouch = true;
+	GetCapsuleComponent()->SetCollisionResponseToChannel(COLLISION_WEAPON, ECR_Ignore);
+
+	//HealthComp = CreateDefaultSubobject<UUDHealthComponent>(TEXT("HealthComp"));
 
 	CameraComp = CreateDefaultSubobject<UCameraComponent>(TEXT("CamerComp"));
 	CameraComp->SetupAttachment(SpringArmComp);
@@ -32,12 +38,13 @@ ADCharacter::ADCharacter()
 void ADCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	//HealthComp->OnHealthChanged.AddDynamic(this, &ADCharacter::OnHealthChanged);
 
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	FVector Loc = GetMesh()->GetSocketLocation("GunSocket");
-	FRotator Rot = GetControlRotation();
-	UE_LOG(LogTemp,Warning,TEXT("Location:%s\nRotation%s"),*(Loc.ToString()),*(Rot.ToString()))
+	//FVector Loc = GetMesh()->GetSocketLocation("GunSocket");
+	//FRotator Rot = GetControlRotation();
+	//UE_LOG(LogTemp,Warning,TEXT("Location:%s\nRotation%s"),*(Loc.ToString()),*(Rot.ToString()))
 	CurrentWeapon = GetWorld()->SpawnActor<ADWeapon>(StarterWeaponClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
 	if (CurrentWeapon)
 	{
@@ -69,7 +76,18 @@ void ADCharacter::BeginCrouch()
 
 void ADCharacter::BeginFire()
 {
-	CurrentWeapon->Fire();
+	if (CurrentWeapon)
+	{
+		CurrentWeapon->StartFire();
+	}
+}
+
+void ADCharacter::EndFire()
+{
+	if (CurrentWeapon)
+	{
+		CurrentWeapon->StopFire();
+	}
 }
 
 void ADCharacter::EndCrouch()
@@ -134,6 +152,32 @@ void ADCharacter::Tick(float DeltaTime)
 
 }
 
+FVector ADCharacter::GetPawnViewLocation() const
+{
+	if (CameraComp)
+	{
+		return CameraComp->GetComponentLocation();
+	}
+
+	return Super::GetPawnViewLocation();
+}
+void ADCharacter::OnHealthChanged(UUDHealthComponent* OwningHealthComp, float Health, float HealthDelta, const class UDamageType* DamageType,
+	class AController* InstigatedBy, AActor* DamageCauser)
+{
+	if (Health <= 0.0f && !bDied)
+	{
+		// Die!
+		bDied = true;
+
+		GetMovementComponent()->StopMovementImmediately();
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+		DetachFromControllerPendingDestroy();
+
+		SetLifeSpan(10.0f);
+	}
+}
+
 // Called to bind functionality to input
 void ADCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -155,6 +199,7 @@ void ADCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindAction("Prone", IE_Released, this, &ADCharacter::EndProne);
 
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ADCharacter::BeginFire);
+	PlayerInputComponent->BindAction("Fire", IE_Released, this, &ADCharacter::EndFire);
 	
 	PlayerInputComponent->BindAction("Sprint", IE_Pressed, this, &ADCharacter::BeginSprint);
 	PlayerInputComponent->BindAction("Sprint", IE_Released, this, &ADCharacter::EndSprint);
@@ -163,3 +208,11 @@ void ADCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 }
 
+
+void ADCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ADCharacter, CurrentWeapon);
+	DOREPLIFETIME(ADCharacter, bDied);
+}

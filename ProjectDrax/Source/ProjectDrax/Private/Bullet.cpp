@@ -31,7 +31,7 @@ void ABullet::Tick(float DeltaTime)
 	//Velocity = FVector(100.f, 100.f, 0.f);
 	FVector Start = this->GetActorLocation();
 	FVector End = (Velocity * DeltaTime) + Start;
-	End.Z += this->GetActorRotation().Pitch;
+	End.Z = this->GetActorRotation().Pitch;
 
 	FCollisionQueryParams QueryParams;
 	QueryParams.AddIgnoredActor(GetOwner());
@@ -52,7 +52,7 @@ void ABullet::Tick(float DeltaTime)
 			//}
 			//
 			//UE_LOG(LogTemp, Warning, TEXT("Hello"));
-		//	Destroy();
+			Destroy();
 
 		}
 		//UE_LOG(LogTemp, Warning, TEXT("End"));
@@ -62,12 +62,12 @@ void ABullet::Tick(float DeltaTime)
 		BulletExpiry += DeltaTime;
 		DrawDebugLine(GetWorld(), Start, End, FColor(0.f, -BulletExpiry * 80.f, 100.f), true);
 		SetActorLocation(End);
-		Velocity += FVector(0.f, 0.f, -20.f) * DeltaTime;
+		Velocity += FVector(0.f, 0.f, -200.f) * DeltaTime;
 
 	}
 	if (BulletExpiry > 3)
 	{
-		//Destroy();
+		Destroy();
 	}
 }
 

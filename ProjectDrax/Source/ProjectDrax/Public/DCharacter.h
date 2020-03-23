@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "DCharacter.generated.h"
 
+
 class USpringArmComponent;
 class UCameraComponent;
 struct FTimerHandle;
@@ -31,6 +32,9 @@ protected:
 	void BeginCrouch();
 
 	void BeginFire();
+	void EndFire();
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class UUDHealthComponent* HealthComp;
 
 	void EndCrouch();
 
@@ -81,7 +85,15 @@ public:
 
 	UPROPERTY(VisibleDefaultsOnly, Category = "Player")
 		FName WeaponAttachSocketName;
+	virtual FVector GetPawnViewLocation() const override;
 	class ADWeapon* CurrentWeapon;
+
+	UFUNCTION()
+		void OnHealthChanged(UUDHealthComponent* OwningHealthComp, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
+
+	/* Pawn died previously */
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Player")
+		bool bDied;
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;

@@ -5,70 +5,204 @@
 
 #include "Bullet.h"
 #include "Engine/World.h"
-#include "GameFramework/Controller.h"
 #include "CollisionQueryParams.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "DrawDebugHelpers.h"
+#include "PhysicalMaterials/PhysicalMaterial.h"
+#include "Particles/ParticleSystemComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "ProjectDrax.h"
+#include "TimerManager.h"
+#include "UnrealNetwork.h"
 // Sets default values
+static int32 DebugWeaponDrawing = 1;
+FAutoConsoleVariableRef CVARDebugWeaponDrawing(
+	TEXT("COOP.DebugWeapons"),
+	DebugWeaponDrawing,
+	TEXT("Draw Debug Lines for Weapons"),
+	ECVF_Cheat);
 ADWeapon::ADWeapon()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
-	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
-	RootComponent = Root;
+ 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it
+	//Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+	
 	MeshComp = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshComp"));
-	//RootComponent = Mesh;
-	//BulletSpeed = 20.0f;
-	//BaseDamage = 20.0f;
-	//RateOfFire = 120.0f;
+	RootComponent = MeshComp;
+	MuzzleSocketName = "MuzzleSocket";
+	TracerTargetName = "Target";
 
-	//AActor* MyOwner = GetOwner();
-	//QueryParams.AddIgnoredActor(MyOwner);
-	//QueryParams.AddIgnoredActor(this);
-	//QueryParams.bTraceComplex = true;
-	//QueryParams.bReturnPhysicalMaterial = true;
+	BaseDamage = 20.0f;
+	BulletSpread = 2.0f;
+	RateOfFire = 600;
 
+	SetReplicates(true);
+
+	NetUpdateFrequency = 66.0f;
+	MinNetUpdateFrequency = 33.0f;
+
+	
+
+}
+
+void ADWeapon::PlayFireEffects(FVector TraceEnd)
+{
+	if (MuzzleEffect)
+	{
+		UGameplayStatics::SpawnEmitterAttached(MuzzleEffect, MeshComp, MuzzleSocketName);
+	}
+
+	if (TracerEffect)
+	{
+		FVector MuzzleLocation = MeshComp->GetSocketLocation(MuzzleSocketName);
+
+		UParticleSystemComponent* TracerComp = UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), TracerEffect, MuzzleLocation);
+		if (TracerComp)
+		{
+			TracerComp->SetVectorParameter(TracerTargetName, TraceEnd);
+		}
+	}
+
+	APawn* MyOwner = Cast<APawn>(GetOwner());
+	if (MyOwner)
+	{
+		APlayerController* PC = Cast<APlayerController>(MyOwner->GetController());
+		if (PC)
+		{
+			PC->ClientPlayCameraShake(FireCamShake);
+		}
+	}
+}
+
+void ADWeapon::PlayImpactEffects(EPhysicalSurface SurfaceType, FVector ImpactPoint)
+{
+	UParticleSystem* SelectedEffect = nullptr;
+	switch (SurfaceType)
+	{
+	case SURFACE_FLESHDEFAULT:
+	case SURFACE_FLESHVULNERABLE:
+		SelectedEffect = FleshImpactEffect;
+		break;
+	default:
+		SelectedEffect = DefaultImpactEffect;
+		break;
+	}
+
+	if (SelectedEffect)
+	{
+		FVector MuzzleLocation = MeshComp->GetSocketLocation(MuzzleSocketName);
+
+		FVector ShotDirection = ImpactPoint - MuzzleLocation;
+		ShotDirection.Normalize();
+
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), SelectedEffect, ImpactPoint, ShotDirection.Rotation());
+	}
 }
 
 void ADWeapon::Fire()
 {
-	FRotator SpawnRotation;
-	FVector SpawnLocation;
+	AActor* MyOwner = GetOwner();
+	if (MyOwner)
+	{
+		FVector EyeLocation;
+		FRotator EyeRotation;
+		MyOwner->GetActorEyesViewPoint(EyeLocation, EyeRotation);
 
-	GetActorEyesViewPoint(SpawnLocation, SpawnRotation);
-	//FVector Direction = SpawnRotation.GetNormalized();
-	FVector Loc;
-	FRotator Rot;
-	FHitResult Hit;
-	//GetController()->GetPlayerViewPoint(Loc, Rot);
-	FVector Start = SpawnLocation;
-	FVector End = Start + (SpawnRotation.Vector() * 1000);
-	FCollisionQueryParams TraceParams;
-	bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, TraceParams);
+		FVector ShotDirection = EyeRotation.Vector();
 
-	DrawDebugLine(GetWorld(), Start, End, FColor::Orange, true);
-	SpawnLocation += FVector(100.f, 100.f, 0.f);
-	FCollisionQueryParams QueryParams;
-	QueryParams.AddIgnoredActor(GetOwner());
-	QueryParams.AddIgnoredActor(this);
-	//	QueryParams.bTraceComplex = true;
-		//DrawDebugLine(GetWorld(), SpawnLocation, End, FColor::Cyan, true);
-	ABullet* Bullet = GetWorld()->SpawnActor<ABullet>(ActorToSpawn, SpawnLocation, SpawnRotation);
-	FVector NewVelocity = GetActorForwardVector() * 400.f;
-	Bullet->Velocity = FVector(NewVelocity);
+		// Bullet Spread
+		float HalfRad = FMath::DegreesToRadians(BulletSpread);
+		ShotDirection = FMath::VRandCone(ShotDirection, HalfRad, HalfRad);
+
+		FVector TraceEnd = EyeLocation + (ShotDirection * 10000);
+
+		FCollisionQueryParams QueryParams;
+		QueryParams.AddIgnoredActor(MyOwner);
+		QueryParams.AddIgnoredActor(this);
+		QueryParams.bTraceComplex = true;
+		QueryParams.bReturnPhysicalMaterial = true;
+
+		// Particle "Target" parameter
+		FVector TracerEndPoint = TraceEnd;
+
+		EPhysicalSurface SurfaceType = SurfaceType_Default;
+
+		
+		FHitResult Hit;
+		if (GetWorld()->LineTraceSingleByChannel(Hit, EyeLocation, TraceEnd, COLLISION_WEAPON, QueryParams))
+		{
+			// Blocking hit! Process damage
+			AActor* HitActor = Hit.GetActor();
+		
+			SurfaceType = UPhysicalMaterial::DetermineSurfaceType(Hit.PhysMaterial.Get());
+
+			float ActualDamage = BaseDamage;
+			if (SurfaceType == SURFACE_FLESHVULNERABLE)
+			{
+				ActualDamage *= 3.0f;
+			}
+
+			UGameplayStatics::ApplyPointDamage(HitActor, ActualDamage, ShotDirection, Hit, MyOwner->GetInstigatorController(), MyOwner, DamageType);
+
+			PlayImpactEffects(SurfaceType, Hit.ImpactPoint);
+
+			TracerEndPoint = Hit.ImpactPoint;
+
+		}
+
+		if (DebugWeaponDrawing > 0)
+		{
+			DrawDebugLine(GetWorld(), EyeLocation, TracerEndPoint, FColor::Yellow, false, 1.0f, 0, 1.0f);
+		}
+
+		PlayFireEffects(TracerEndPoint);
+
+		if (Role == ROLE_Authority)
+		{
+			HitScanTrace.TraceTo = TracerEndPoint;
+			HitScanTrace.SurfaceType = SurfaceType;
+		}
+
+		LastFireTime = GetWorld()->TimeSeconds;
+	}
+}
+void ADWeapon::OnRep_HitScanTrace()
+{
+	// Play cosmetic FX
+	PlayFireEffects(HitScanTrace.TraceTo);
+	PlayImpactEffects(HitScanTrace.SurfaceType, HitScanTrace.TraceTo);
+}
+void ADWeapon::ServerFire_Implementation()
+{
+	Fire();
+}
+
+bool ADWeapon::ServerFire_Validate()
+{
+	return true;
+}
+
+void ADWeapon::StartFire()
+{
+	float FirstDelay = FMath::Max(LastFireTime + TimeBetweenShots - GetWorld()->TimeSeconds, 0.0f);
+
+	GetWorldTimerManager().SetTimer(TimerHandle_TimeBetweenShots, this, &ADWeapon::Fire, TimeBetweenShots, true, FirstDelay);
+}
+
+void ADWeapon::StopFire()
+{
+	GetWorldTimerManager().ClearTimer(TimerHandle_TimeBetweenShots);
 }
 
 // Called when the game starts or when spawned
 void ADWeapon::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	TimeBetweenShots = 60 / RateOfFire;
 }
 
-// Called every frame
-void ADWeapon::Tick(float DeltaTime)
+void ADWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
-	Super::Tick(DeltaTime);
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
+	DOREPLIFETIME_CONDITION(ADWeapon, HitScanTrace, COND_SkipOwner);
 }
-

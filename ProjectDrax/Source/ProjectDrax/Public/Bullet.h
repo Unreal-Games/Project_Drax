@@ -21,6 +21,8 @@ public:
 		float BulletSpeed;
 	UPROPERTY(EditAnywhere, Category = "Movement")
 		FVector Velocity;
+	UPROPERTY(EditAnywhere, Category = "Movement")
+		float Multiplier;
 
 protected:
 	// Called when the game starts or when spawned
