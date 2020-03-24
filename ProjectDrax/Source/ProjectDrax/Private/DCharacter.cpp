@@ -9,6 +9,7 @@
 #include "Engine/World.h"
 #include "DWeapon.h"
 #include "ProjectDrax.h"
+#include "Components/UDHealthComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "TimerManager.h"
@@ -26,7 +27,7 @@ ADCharacter::ADCharacter()
 	GetMovementComponent()->GetNavAgentPropertiesRef().bCanCrouch = true;
 	GetCapsuleComponent()->SetCollisionResponseToChannel(COLLISION_WEAPON, ECR_Ignore);
 
-	//HealthComp = CreateDefaultSubobject<UUDHealthComponent>(TEXT("HealthComp"));
+	HealthComp = CreateDefaultSubobject<UUDHealthComponent>(TEXT("HealthComp"));
 
 	CameraComp = CreateDefaultSubobject<UCameraComponent>(TEXT("CamerComp"));
 	CameraComp->SetupAttachment(SpringArmComp);
@@ -38,7 +39,7 @@ ADCharacter::ADCharacter()
 void ADCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	//HealthComp->OnHealthChanged.AddDynamic(this, &ADCharacter::OnHealthChanged);
+	HealthComp->OnHealthChanged.AddDynamic(this, &ADCharacter::OnHealthChanged);
 
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
@@ -78,6 +79,7 @@ void ADCharacter::BeginFire()
 {
 	if (CurrentWeapon)
 	{
+		bFire = true;
 		CurrentWeapon->StartFire();
 	}
 }
@@ -86,6 +88,7 @@ void ADCharacter::EndFire()
 {
 	if (CurrentWeapon)
 	{
+		bFire = false;
 		CurrentWeapon->StopFire();
 	}
 }
@@ -168,7 +171,7 @@ void ADCharacter::OnHealthChanged(UUDHealthComponent* OwningHealthComp, float He
 	{
 		// Die!
 		bDied = true;
-
+		UE_LOG(LogTemp, Log, TEXT("Died:%d"),bDied );
 		GetMovementComponent()->StopMovementImmediately();
 		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 

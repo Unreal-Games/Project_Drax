@@ -58,6 +58,8 @@ void StandUp();
 
 	FTimerHandle InputTimeHandle;
 
+	UPROPERTY(BlueprintReadOnly, Category = "prone")
+		bool bFire;
 
 UPROPERTY(BlueprintReadOnly,Category="prone")
 bool bProne;
