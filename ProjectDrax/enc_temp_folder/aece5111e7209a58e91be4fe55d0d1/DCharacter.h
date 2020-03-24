@@ -19,13 +19,7 @@ class PROJECTDRAX_API ADCharacter : public ACharacter
 public:
 	// Sets default values for this character's properties
 	ADCharacter();
-	
-		virtual void AddControllerPitchInput(float Val) override;
-
-
-		virtual void AddControllerYawInput(float Val) override;
-
-		virtual void Jump() override;
+	//FVector// PlayerRotation;
 
 protected:
 	// Called when the game starts or when spawned

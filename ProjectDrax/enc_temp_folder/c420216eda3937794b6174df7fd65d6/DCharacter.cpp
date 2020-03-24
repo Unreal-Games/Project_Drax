@@ -34,29 +34,7 @@ ADCharacter::ADCharacter()
 
 	WeaponAttachSocketName = "GunSocket";
 
-	
-}
-
-void ADCharacter::AddControllerPitchInput(float Val)
-{
-	Super::AddControllerPitchInput(Val);
-	
-}
-
-void ADCharacter::AddControllerYawInput(float Val)
-{
-	
-	Super::AddControllerYawInput(Val);
-	FRotator PlayerRotation = GetControlRotation();
-	PlayerRotation.Pitch = 0;
-	PlayerRotation.Roll = 0;
-	SetActorRotation(PlayerRotation);
-	
-}
-
-void ADCharacter::Jump()
-{
-	Super::Jump;
+	//PlayerRotation = CameraComp->GetForwardVector() * FVector(1.f, 1.f, 0.f);
 }
 
 // Called when the game starts or when spawned
