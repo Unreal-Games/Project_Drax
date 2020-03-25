@@ -54,11 +54,6 @@ void ADCharacter::AddControllerYawInput(float Val)
 	
 }
 
-void ADCharacter::Jump()
-{
-	Super::Jump;
-}
-
 // Called when the game starts or when spawned
 void ADCharacter::BeginPlay()
 {
@@ -75,7 +70,7 @@ void ADCharacter::BeginPlay()
 	{
 		CurrentWeapon->SetOwner(this);
 		CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachSocketName);
-		UE_LOG(LogTemp, Warning, TEXT("Socket:%s"), *(WeaponAttachSocketName.ToString()))
+		//UE_LOG(LogTemp, Warning, TEXT("Socket:%s"), *(WeaponAttachSocketName.ToString()))
 	}
 	
 	bProning=false;
@@ -207,6 +202,25 @@ void ADCharacter::OnHealthChanged(UUDHealthComponent* OwningHealthComp, float He
 	}
 }
 
+void ADCharacter::ReloadWeapon()
+{
+	if(CurrentWeapon)
+	{
+		bReload = true;
+		bFire = false;
+		if(bReload)
+			UE_LOG(LogTemp,Warning,TEXT("True"))
+		//int c = CurrentWeapon->GetBullets;
+		//if (c > 0)
+		//{
+			GetWorldTimerManager().SetTimer(TimerHandle_ReloadTime, CurrentWeapon, &ADWeapon::ReloadWeapon, 3.0f, false);
+			//CurrentWeapon->ReloadWeapon();
+			bReload = false;
+		//}
+		
+	}
+}
+
 // Called to bind functionality to input
 void ADCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -229,6 +243,8 @@ void ADCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ADCharacter::BeginFire);
 	PlayerInputComponent->BindAction("Fire", IE_Released, this, &ADCharacter::EndFire);
+	
+	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &ADCharacter::ReloadWeapon);
 	
 	PlayerInputComponent->BindAction("Sprint", IE_Pressed, this, &ADCharacter::BeginSprint);
 	PlayerInputComponent->BindAction("Sprint", IE_Released, this, &ADCharacter::EndSprint);

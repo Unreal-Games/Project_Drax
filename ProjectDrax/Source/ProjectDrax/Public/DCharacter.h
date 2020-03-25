@@ -25,7 +25,7 @@ public:
 
 		virtual void AddControllerYawInput(float Val) override;
 
-		virtual void Jump() override;
+		
 
 protected:
 	// Called when the game starts or when spawned
@@ -65,8 +65,7 @@ void StandUp();
 
 	FTimerHandle InputTimeHandle;
 
-	UPROPERTY(BlueprintReadOnly, Category = "prone")
-		bool bFire;
+	
 
 UPROPERTY(BlueprintReadOnly,Category="prone")
 bool bProne;
@@ -96,6 +95,11 @@ public:
 		FName WeaponAttachSocketName;
 	virtual FVector GetPawnViewLocation() const override;
 	class ADWeapon* CurrentWeapon;
+	UPROPERTY(BlueprintReadOnly, Category = "prone")
+		bool bFire ;
+	UPROPERTY(BlueprintReadOnly, Category = "prone")
+		 bool bReload ;
+	FTimerHandle TimerHandle_ReloadTime;
 
 	UFUNCTION()
 		void OnHealthChanged(UUDHealthComponent* OwningHealthComp, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
@@ -103,6 +107,7 @@ public:
 	/* Pawn died previously */
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Player")
 		bool bDied;
+	void ReloadWeapon();
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;

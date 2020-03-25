@@ -7,6 +7,7 @@
 #include "Engine/World.h"
 #include "CollisionQueryParams.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "DCharacter.h"
 #include "DrawDebugHelpers.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
 #include "Particles/ParticleSystemComponent.h"
@@ -21,6 +22,12 @@ FAutoConsoleVariableRef CVARDebugWeaponDrawing(
 	DebugWeaponDrawing,
 	TEXT("Draw Debug Lines for Weapons"),
 	ECVF_Cheat);
+
+int ADWeapon::GetBullets() const
+{
+	return int(TotalBullets);
+}
+
 ADWeapon::ADWeapon()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it
@@ -40,7 +47,8 @@ ADWeapon::ADWeapon()
 	NetUpdateFrequency = 66.0f;
 	MinNetUpdateFrequency = 33.0f;
 
-	
+	DefaultMagSize = 40;
+	TotalBullets = 120;
 
 }
 
@@ -100,69 +108,78 @@ void ADWeapon::PlayImpactEffects(EPhysicalSurface SurfaceType, FVector ImpactPoi
 
 void ADWeapon::Fire()
 {
-	AActor* MyOwner = GetOwner();
-	if (MyOwner)
+	if (CurrentMagSize > 0)
 	{
-		FVector EyeLocation;
-		FRotator EyeRotation;
-		MyOwner->GetActorEyesViewPoint(EyeLocation, EyeRotation);
-
-		FVector ShotDirection = EyeRotation.Vector();
-
-		// Bullet Spread
-		float HalfRad = FMath::DegreesToRadians(BulletSpread);
-		ShotDirection = FMath::VRandCone(ShotDirection, HalfRad, HalfRad);
-
-		FVector TraceEnd = EyeLocation + (ShotDirection * 10000);
-
-		FCollisionQueryParams QueryParams;
-		QueryParams.AddIgnoredActor(MyOwner);
-		QueryParams.AddIgnoredActor(this);
-		QueryParams.bTraceComplex = true;
-		QueryParams.bReturnPhysicalMaterial = true;
-
-		// Particle "Target" parameter
-		FVector TracerEndPoint = TraceEnd;
-
-		EPhysicalSurface SurfaceType = SurfaceType_Default;
-
-		
-		FHitResult Hit;
-		if (GetWorld()->LineTraceSingleByChannel(Hit, EyeLocation, TraceEnd, COLLISION_WEAPON, QueryParams))
+		AActor* MyOwner = GetOwner();
+		if (MyOwner)
 		{
-			// Blocking hit! Process damage
-			AActor* HitActor = Hit.GetActor();
-		
-			SurfaceType = UPhysicalMaterial::DetermineSurfaceType(Hit.PhysMaterial.Get());
+			FVector EyeLocation;
+			FRotator EyeRotation;
+			MyOwner->GetActorEyesViewPoint(EyeLocation, EyeRotation);
 
-			float ActualDamage = BaseDamage;
-			if (SurfaceType == SURFACE_FLESHVULNERABLE)
+			FVector ShotDirection = EyeRotation.Vector();
+
+			// Bullet Spread
+			float HalfRad = FMath::DegreesToRadians(BulletSpread);
+			ShotDirection = FMath::VRandCone(ShotDirection, HalfRad, HalfRad);
+
+			FVector TraceEnd = EyeLocation + (ShotDirection * 10000);
+
+			FCollisionQueryParams QueryParams;
+			QueryParams.AddIgnoredActor(MyOwner);
+			QueryParams.AddIgnoredActor(this);
+			QueryParams.bTraceComplex = true;
+			QueryParams.bReturnPhysicalMaterial = true;
+
+			// Particle "Target" parameter
+			FVector TracerEndPoint = TraceEnd;
+
+			EPhysicalSurface SurfaceType = SurfaceType_Default;
+
+			CurrentMagSize -= 1;
+			UE_LOG(LogTemp,Warning,TEXT("Current Mag:%d"),CurrentMagSize)
+			FHitResult Hit;
+			if (GetWorld()->LineTraceSingleByChannel(Hit, EyeLocation, TraceEnd, COLLISION_WEAPON, QueryParams))
 			{
-				ActualDamage *= 3.0f;
+				// Blocking hit! Process damage
+				AActor* HitActor = Hit.GetActor();
+
+				SurfaceType = UPhysicalMaterial::DetermineSurfaceType(Hit.PhysMaterial.Get());
+
+				float ActualDamage = BaseDamage;
+				if (SurfaceType == SURFACE_FLESHVULNERABLE)
+				{
+					ActualDamage *= 3.0f;
+				}
+
+				UGameplayStatics::ApplyPointDamage(HitActor, ActualDamage, ShotDirection, Hit, MyOwner->GetInstigatorController(), MyOwner, DamageType);
+
+				PlayImpactEffects(SurfaceType, Hit.ImpactPoint);
+
+				TracerEndPoint = Hit.ImpactPoint;
+
 			}
 
-			UGameplayStatics::ApplyPointDamage(HitActor, ActualDamage, ShotDirection, Hit, MyOwner->GetInstigatorController(), MyOwner, DamageType);
+			if (DebugWeaponDrawing > 0)
+			{
+				DrawDebugLine(GetWorld(), EyeLocation, TracerEndPoint, FColor::Yellow, false, 1.0f, 0, 1.0f);
+			}
 
-			PlayImpactEffects(SurfaceType, Hit.ImpactPoint);
+			PlayFireEffects(TracerEndPoint);
 
-			TracerEndPoint = Hit.ImpactPoint;
+			if (Role == ROLE_Authority)
+			{
+				HitScanTrace.TraceTo = TracerEndPoint;
+				HitScanTrace.SurfaceType = SurfaceType;
+			}
 
+			LastFireTime = GetWorld()->TimeSeconds;
 		}
-
-		if (DebugWeaponDrawing > 0)
-		{
-			DrawDebugLine(GetWorld(), EyeLocation, TracerEndPoint, FColor::Yellow, false, 1.0f, 0, 1.0f);
-		}
-
-		PlayFireEffects(TracerEndPoint);
-
-		if (Role == ROLE_Authority)
-		{
-			HitScanTrace.TraceTo = TracerEndPoint;
-			HitScanTrace.SurfaceType = SurfaceType;
-		}
-
-		LastFireTime = GetWorld()->TimeSeconds;
+	}
+	else
+	{
+		flag = true;
+		ReloadWeapon();
 	}
 }
 void ADWeapon::OnRep_HitScanTrace()
@@ -193,10 +210,27 @@ void ADWeapon::StopFire()
 	GetWorldTimerManager().ClearTimer(TimerHandle_TimeBetweenShots);
 }
 
+void ADWeapon::ReloadWeapon()
+{
+	if(flag)
+	{
+		flag = false;
+		GetWorldTimerManager().SetTimer(TimerHandle_ReloadTime, this, &ADWeapon::ReloadWeapon, 3.0f, false,3.f);
+		TotalBullets -= DefaultMagSize - CurrentMagSize;
+		CurrentMagSize = DefaultMagSize;
+		
+	}
+	TotalBullets -= DefaultMagSize - CurrentMagSize;
+	CurrentMagSize = DefaultMagSize;
+	
+}
+
 // Called when the game starts or when spawned
 void ADWeapon::BeginPlay()
 {
 	Super::BeginPlay();
+	flag = false;
+	CurrentMagSize = DefaultMagSize;
 	TimeBetweenShots = 60 / RateOfFire;
 }
 

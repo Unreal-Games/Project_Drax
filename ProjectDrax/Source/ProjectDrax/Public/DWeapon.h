@@ -20,15 +20,21 @@ public:
 
 	UPROPERTY()
 		FVector_NetQuantize TraceTo;
+	
+	
 };
 UCLASS()
 class PROJECTDRAX_API ADWeapon : public AActor
 {
 	GENERATED_BODY()
 	
-public:	
+public:
+	int GetBullets() const;
 	// Sets default values for this actor's properties
 	ADWeapon();
+	//class ADCharacter* c;
+	bool flag;
+	FTimerHandle TimerHandle_ReloadTime;
 
 	UPROPERTY()
 		USceneComponent* Root;
@@ -37,6 +43,13 @@ public:
 	void PlayFireEffects(FVector TraceEnd);
 
 	void PlayImpactEffects(EPhysicalSurface SurfaceType, FVector ImpactPoint);
+
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
+		int DefaultMagSize;
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
+		int CurrentMagSize;
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
+		int TotalBullets;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
 		TSubclassOf<UDamageType> DamageType;
@@ -71,6 +84,7 @@ public:
 		void ServerFire();
 
 	FTimerHandle TimerHandle_TimeBetweenShots;
+	
 
 	float LastFireTime;
 
@@ -96,6 +110,10 @@ public:
 	void StartFire();
 
 	void StopFire();
+
+	void ReloadWeapon();
+
+	//void ResetMagBullets();
 
 protected:
 	// Called when the game starts or when spawned
