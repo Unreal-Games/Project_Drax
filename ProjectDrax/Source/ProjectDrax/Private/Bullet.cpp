@@ -4,70 +4,147 @@
 #include "Bullet.h"
 #include "CollisionQueryParams.h"
 #include "Engine/World.h"
+#include "ProjectDrax.h"
+#include "GameFramework/ProjectileMovementComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Particles/ParticleSystemComponent.h"
+#include "Components/BoxComponent.h"
+#include "TimerManager.h"
+#include "DCharacter.h"
+#include "PhysicalMaterials/PhysicalMaterial.h"
 #include "DrawDebugHelpers.h"
+#include "Engine/Engine.h"
+#include "Kismet/GameplayStatics.h"
+#include "UnrealNetwork.h"
 
 // Sets default values
 ABullet::ABullet()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+	BulletSpeed = 40000.f;
+	GravityDelay = 0.1;
+	GravityScale = 3.5f;
+	ProjectileCollisions = CreateDefaultSubobject<UBoxComponent>(TEXT("ProjectileCollision"));
+	ProjectileCollisions->InitBoxExtent(FVector(2.f));
+	
+		QueryParams.AddIgnoredActor(MyOwner);
+		QueryParams.AddIgnoredActor(this);
+		QueryParams.bTraceComplex = true;
+		QueryParams.bReturnPhysicalMaterial = true;
+	
+	ProjectileCollisions->BodyInstance.SetCollisionProfileName("Projectile");
+	ProjectileCollisions->OnComponentHit.AddDynamic(this, &ABullet::OnProjectileHit);
+	SetRootComponent(ProjectileCollisions);
 
+	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
+	ProjectileMovement->UpdatedComponent = ProjectileCollisions;
+	ProjectileMovement->InitialSpeed = BulletSpeed;
+	ProjectileMovement->bShouldBounce = false;
+	ProjectileMovement->ProjectileGravityScale = 0.f;
+
+	ProjectileMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ProjectileMesh"));
+	ProjectileMesh->SetupAttachment(RootComponent);
+
+	ProjectileParticles = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("ProjectileParticle"));
+	ProjectileParticles->SetupAttachment(RootComponent);
+
+	InitialLifeSpan = 3.0f;
 }
 
-// Called when the game starts or when spawned
+void ABullet::OnProjectileHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+	FVector NormalImpulse, const FHitResult& Hit)
+{
+	if(OtherActor->IsA(ACharacter::StaticClass()))
+	{
+		UE_LOG(LogTemp,Warning,TEXT("Ds"))
+			if (Hit.BoneName != NAME_None)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Bone:%s"), *Hit.BoneName.ToString()));
+
+			}
+				FVector ShotDirection = GetActorRotation().Vector();
+				float BulletSpread = 2.0f;
+			//	// Bullet Spread
+				float HalfRad = FMath::DegreesToRadians(BulletSpread);
+				ShotDirection = FMath::VRandCone(ShotDirection, HalfRad, HalfRad);
+			// Blocking hit! Process damage
+			EPhysicalSurface SurfaceType = SurfaceType_Default;
+				AActor* HitActor = Hit.GetActor();
+				if (HitActor)
+				{
+					SurfaceType = UPhysicalMaterial::DetermineSurfaceType(Hit.PhysMaterial.Get());
+
+					float ActualDamage = BaseDamage;
+					if (SurfaceType == SURFACE_FLESHVULNERABLE)
+					{
+						ActualDamage *= 3.0f;
+					}
+					if(SurfaceType==SURFACE_FLESHLIMBS)
+					{
+						ActualDamage /= 3;
+					}
+					//if(GetOwner()->GetInstigatorController())
+					UGameplayStatics::ApplyPointDamage(HitActor, ActualDamage, ShotDirection, Hit, Inst, this, DamageType);
+
+					PlayImpactEffects(SurfaceType, Hit.ImpactPoint);
+
+					//TracerEndPoint = Hit.ImpactPoint;
+				}
+		
+			
+			//OtherActor->Destroy()
+	}
+	//UE_LOG(LogTemp,Warning,TEXT("Actor:%s"),*GetOwner()->GetName())
+		Destroy();
+}
+
+
+void ABullet::ApplyGravity()
+{
+	ProjectileMovement->ProjectileGravityScale = GravityScale;
+}
+
+void ABullet::PlayImpactEffects(EPhysicalSurface SurfaceType, FVector ImpactPoint)
+{
+	UParticleSystem* SelectedEffect = nullptr;
+	switch (SurfaceType)
+	{
+	case SURFACE_FLESHDEFAULT:
+	case SURFACE_FLESHVULNERABLE:
+		SelectedEffect = FleshImpactEffect;
+		break;
+	default:
+		SelectedEffect = DefaultImpactEffect;
+		break;
+	}
+
+	if (SelectedEffect)
+	{
+		//FVector MuzzleLocation = GetOwner()->GetActorForwardVector();
+
+		FVector ShotDirection = ImpactPoint;// -MuzzleLocation;
+		ShotDirection.Normalize();
+
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), SelectedEffect, ImpactPoint, ShotDirection.Rotation());
+	}
+}
+
+void ABullet::OnRep_HitScanTrace()
+{
+	//PlayFireEffects(HitScanTrace.TraceTo);
+	PlayImpactEffects(HitScanTrace.SurfaceType, HitScanTrace.TraceTo);
+}
+
 void ABullet::BeginPlay()
 {
 	Super::BeginPlay();
+	FTimerHandle GravityTimer;
+	GetWorldTimerManager().SetTimer(GravityTimer, this, &ABullet::ApplyGravity, GravityDelay, false);
+	
 	
 }
-
-// Called every frame
-void ABullet::Tick(float DeltaTime)
+void ABullet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
-	Super::Tick(DeltaTime);
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	Super::Tick(DeltaTime);
-	FHitResult Hit;
-	//Velocity = FVector(100.f, 100.f, 0.f);
-	FVector Start = this->GetActorLocation();
-	FVector End = (Velocity * DeltaTime) + Start;
-	End.Z = this->GetActorRotation().Pitch;
-
-	FCollisionQueryParams QueryParams;
-	QueryParams.AddIgnoredActor(GetOwner());
-	QueryParams.AddIgnoredActor(this);
-	QueryParams.bTraceComplex = true;
-	QueryParams.bReturnPhysicalMaterial = true;
-
-	//UE_LOG(LogTemp, Warning, TEXT("Start:%s/nEnd:%s"),*(Start.ToString()),*(End.ToString()));
-	if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, QueryParams))
-	{
-		if (Hit.GetActor())
-		{
-			//ADestructibleActor Mesh = Cast<ADestructibleActor>(Hit.GetActor());
-
-			//if(Mesh)
-			//{
-			//	Mesh->GetDestructibleComponent()->AppyRadiousDamage(10.0f, Hit.ImpactPoint, 32.f, 10.f, false);
-			//}
-			//
-			//UE_LOG(LogTemp, Warning, TEXT("Hello"));
-			Destroy();
-
-		}
-		//UE_LOG(LogTemp, Warning, TEXT("End"));
-	}
-	else
-	{
-		BulletExpiry += DeltaTime;
-		DrawDebugLine(GetWorld(), Start, End, FColor(0.f, -BulletExpiry * 80.f, 100.f), true);
-		SetActorLocation(End);
-		Velocity += FVector(0.f, 0.f, -200.f) * DeltaTime;
-
-	}
-	if (BulletExpiry > 3)
-	{
-		Destroy();
-	}
+	DOREPLIFETIME_CONDITION(ABullet, HitScanTrace, COND_SkipOwner);
 }
-

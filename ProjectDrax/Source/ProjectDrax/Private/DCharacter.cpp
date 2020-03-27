@@ -8,6 +8,7 @@
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "DWeapon.h"
+#include "Bullet.h"
 #include "ProjectDrax.h"
 #include "Components/UDHealthComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -48,10 +49,12 @@ void ADCharacter::AddControllerYawInput(float Val)
 	
 	Super::AddControllerYawInput(Val);
 	FRotator PlayerRotation = GetControlRotation();
-	PlayerRotation.Pitch = 0;
-	PlayerRotation.Roll = 0;
-	SetActorRotation(PlayerRotation);
-	
+	if (PlayerRotation.Pitch> 90.f||PlayerRotation.Pitch<-90)
+	{
+		PlayerRotation.Pitch = 0;
+		PlayerRotation.Roll = 0;
+		SetActorRotation(PlayerRotation);
+	}
 }
 
 // Called when the game starts or when spawned
@@ -149,12 +152,21 @@ void ADCharacter::EndProne()
 
 void ADCharacter::BeginZoom()
 {
-	//@TODO perform zoom
+	if(CurrentWeapon)
+	{
+		CameraComp->SetFieldOfView(10.f);
+		CurrentWeapon->ToggleADS();
+	}
 }
 
 void ADCharacter::EndZoom()
 {
-	//@TODO perform endzoom
+	if (CurrentWeapon)
+	{
+		CameraComp->SetFieldOfView(90.f);
+		CurrentWeapon->ToggleADS();
+		
+	}
 }
 
 void ADCharacter::BeginSprint()
@@ -185,8 +197,10 @@ FVector ADCharacter::GetPawnViewLocation() const
 
 	return Super::GetPawnViewLocation();
 }
+
+
 void ADCharacter::OnHealthChanged(UUDHealthComponent* OwningHealthComp, float Health, float HealthDelta, const class UDamageType* DamageType,
-	class AController* InstigatedBy, AActor* DamageCauser)
+                                  class AController* InstigatedBy, AActor* DamageCauser)
 {
 	if (Health <= 0.0f && !bDied)
 	{
@@ -206,18 +220,11 @@ void ADCharacter::ReloadWeapon()
 {
 	if(CurrentWeapon)
 	{
-		bReload = true;
-		bFire = false;
-		if(bReload)
-			UE_LOG(LogTemp,Warning,TEXT("True"))
-		//int c = CurrentWeapon->GetBullets;
-		//if (c > 0)
-		//{
-			GetWorldTimerManager().SetTimer(TimerHandle_ReloadTime, CurrentWeapon, &ADWeapon::ReloadWeapon, 3.0f, false);
-			//CurrentWeapon->ReloadWeapon();
-			bReload = false;
-		//}
 		
+		bFire = false;
+		
+			//GetWorldTimerManager().SetTimer(TimerHandle_ReloadTime, CurrentWeapon, &ADWeapon::ReloadWeapon, 3.0f, false);
+			CurrentWeapon->ReloadWeapon();
 	}
 }
 
@@ -243,6 +250,10 @@ void ADCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ADCharacter::BeginFire);
 	PlayerInputComponent->BindAction("Fire", IE_Released, this, &ADCharacter::EndFire);
+
+	PlayerInputComponent->BindAction("ADS", IE_Pressed, this, &ADCharacter::BeginZoom);
+	PlayerInputComponent->BindAction("ADS", IE_Released, this, &ADCharacter::EndZoom);
+
 	
 	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &ADCharacter::ReloadWeapon);
 	

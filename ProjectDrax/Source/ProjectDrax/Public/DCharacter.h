@@ -97,9 +97,8 @@ public:
 	class ADWeapon* CurrentWeapon;
 	UPROPERTY(BlueprintReadOnly, Category = "prone")
 		bool bFire ;
-	UPROPERTY(BlueprintReadOnly, Category = "prone")
-		 bool bReload ;
-	FTimerHandle TimerHandle_ReloadTime;
+	
+	
 
 	UFUNCTION()
 		void OnHealthChanged(UUDHealthComponent* OwningHealthComp, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);

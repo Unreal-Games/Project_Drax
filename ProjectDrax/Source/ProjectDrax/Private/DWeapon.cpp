@@ -23,10 +23,7 @@ FAutoConsoleVariableRef CVARDebugWeaponDrawing(
 	TEXT("Draw Debug Lines for Weapons"),
 	ECVF_Cheat);
 
-int ADWeapon::GetBullets() const
-{
-	return int(TotalBullets);
-}
+
 
 ADWeapon::ADWeapon()
 {
@@ -38,7 +35,7 @@ ADWeapon::ADWeapon()
 	MuzzleSocketName = "MuzzleSocket";
 	TracerTargetName = "Target";
 
-	BaseDamage = 20.0f;
+	//BaseDamage = 20.0f;
 	BulletSpread = 2.0f;
 	RateOfFire = 600;
 
@@ -52,6 +49,23 @@ ADWeapon::ADWeapon()
 
 }
 
+void ADWeapon::ToggleADS()
+{
+	if(bIsADS)
+	{
+		bIsADS = false;
+		HideADSOverlay();
+		MeshComp->SetVisibility(true);
+		
+	}
+	else
+	{
+		bIsADS = true;
+		ShowADSOverlay();
+		MeshComp->SetVisibility(false);
+	}
+}
+
 void ADWeapon::PlayFireEffects(FVector TraceEnd)
 {
 	if (MuzzleEffect)
@@ -59,16 +73,7 @@ void ADWeapon::PlayFireEffects(FVector TraceEnd)
 		UGameplayStatics::SpawnEmitterAttached(MuzzleEffect, MeshComp, MuzzleSocketName);
 	}
 
-	if (TracerEffect)
-	{
-		FVector MuzzleLocation = MeshComp->GetSocketLocation(MuzzleSocketName);
 
-		UParticleSystemComponent* TracerComp = UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), TracerEffect, MuzzleLocation);
-		if (TracerComp)
-		{
-			TracerComp->SetVectorParameter(TracerTargetName, TraceEnd);
-		}
-	}
 
 	APawn* MyOwner = Cast<APawn>(GetOwner());
 	if (MyOwner)
@@ -81,100 +86,87 @@ void ADWeapon::PlayFireEffects(FVector TraceEnd)
 	}
 }
 
-void ADWeapon::PlayImpactEffects(EPhysicalSurface SurfaceType, FVector ImpactPoint)
-{
-	UParticleSystem* SelectedEffect = nullptr;
-	switch (SurfaceType)
-	{
-	case SURFACE_FLESHDEFAULT:
-	case SURFACE_FLESHVULNERABLE:
-		SelectedEffect = FleshImpactEffect;
-		break;
-	default:
-		SelectedEffect = DefaultImpactEffect;
-		break;
-	}
-
-	if (SelectedEffect)
-	{
-		FVector MuzzleLocation = MeshComp->GetSocketLocation(MuzzleSocketName);
-
-		FVector ShotDirection = ImpactPoint - MuzzleLocation;
-		ShotDirection.Normalize();
-
-		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), SelectedEffect, ImpactPoint, ShotDirection.Rotation());
-	}
-}
-
 void ADWeapon::Fire()
 {
 	if (CurrentMagSize > 0)
 	{
+		CurrentMagSize -= 1;
 		AActor* MyOwner = GetOwner();
-		if (MyOwner)
-		{
-			FVector EyeLocation;
-			FRotator EyeRotation;
-			MyOwner->GetActorEyesViewPoint(EyeLocation, EyeRotation);
+		//if (MyOwner)
+		//{
+		//	FVector EyeLocation;
+		//	FRotator EyeRotation;
+		//	MyOwner->GetActorEyesViewPoint(EyeLocation, EyeRotation);
 
-			FVector ShotDirection = EyeRotation.Vector();
+		//	FVector ShotDirection = EyeRotation.Vector();
 
-			// Bullet Spread
-			float HalfRad = FMath::DegreesToRadians(BulletSpread);
-			ShotDirection = FMath::VRandCone(ShotDirection, HalfRad, HalfRad);
+		//	// Bullet Spread
+		//	float HalfRad = FMath::DegreesToRadians(BulletSpread);
+		//	ShotDirection = FMath::VRandCone(ShotDirection, HalfRad, HalfRad);
 
-			FVector TraceEnd = EyeLocation + (ShotDirection * 10000);
+		//	FVector TraceEnd = EyeLocation + (ShotDirection * 10000);
 
-			FCollisionQueryParams QueryParams;
-			QueryParams.AddIgnoredActor(MyOwner);
-			QueryParams.AddIgnoredActor(this);
-			QueryParams.bTraceComplex = true;
-			QueryParams.bReturnPhysicalMaterial = true;
+		//	FCollisionQueryParams QueryParams;
+		//	QueryParams.AddIgnoredActor(MyOwner);
+		//	QueryParams.AddIgnoredActor(this);
+		//	QueryParams.bTraceComplex = true;
+		//	QueryParams.bReturnPhysicalMaterial = true;
 
-			// Particle "Target" parameter
-			FVector TracerEndPoint = TraceEnd;
+		//	// Particle "Target" parameter
+		//	FVector TracerEndPoint = TraceEnd;
 
-			EPhysicalSurface SurfaceType = SurfaceType_Default;
+		//	EPhysicalSurface SurfaceType = SurfaceType_Default;
 
-			CurrentMagSize -= 1;
-			UE_LOG(LogTemp,Warning,TEXT("Current Mag:%d"),CurrentMagSize)
-			FHitResult Hit;
-			if (GetWorld()->LineTraceSingleByChannel(Hit, EyeLocation, TraceEnd, COLLISION_WEAPON, QueryParams))
-			{
-				// Blocking hit! Process damage
-				AActor* HitActor = Hit.GetActor();
+		//	
+		//	UE_LOG(LogTemp,Warning,TEXT("Current Mag:%d"),CurrentMagSize)
+		//	FHitResult Hit;
+		//if (GetWorld()->LineTraceSingleByChannel(Hit, EyeLocation, TraceEnd, COLLISION_WEAPON, QueryParams))
+		//	{
+		//		// Blocking hit! Process damage
+		//		AActor* HitActor = Hit.GetActor();
 
-				SurfaceType = UPhysicalMaterial::DetermineSurfaceType(Hit.PhysMaterial.Get());
+		//		SurfaceType = UPhysicalMaterial::DetermineSurfaceType(Hit.PhysMaterial.Get());
 
-				float ActualDamage = BaseDamage;
-				if (SurfaceType == SURFACE_FLESHVULNERABLE)
-				{
-					ActualDamage *= 3.0f;
-				}
+		//		float ActualDamage = BaseDamage;
+		//		if (SurfaceType == SURFACE_FLESHVULNERABLE)
+		//		{
+		//			ActualDamage *= 3.0f;
+		//		}
 
-				UGameplayStatics::ApplyPointDamage(HitActor, ActualDamage, ShotDirection, Hit, MyOwner->GetInstigatorController(), MyOwner, DamageType);
+		//		UGameplayStatics::ApplyPointDamage(HitActor, ActualDamage, ShotDirection, Hit, MyOwner->GetInstigatorController(), MyOwner, DamageType);
 
-				PlayImpactEffects(SurfaceType, Hit.ImpactPoint);
+		//		PlayImpactEffects(SurfaceType, Hit.ImpactPoint);
 
-				TracerEndPoint = Hit.ImpactPoint;
+		//		TracerEndPoint = Hit.ImpactPoint;
 
-			}
+		//	}
 
-			if (DebugWeaponDrawing > 0)
-			{
-				DrawDebugLine(GetWorld(), EyeLocation, TracerEndPoint, FColor::Yellow, false, 1.0f, 0, 1.0f);
-			}
+		//	if (DebugWeaponDrawing > 0)
+		//	{
+		//		DrawDebugLine(GetWorld(), EyeLocation, TracerEndPoint, FColor::Yellow, false, 1.0f, 0, 1.0f);
+		//	}
 
-			PlayFireEffects(TracerEndPoint);
+		//	PlayFireEffects(TracerEndPoint);
 
-			if (Role == ROLE_Authority)
-			{
-				HitScanTrace.TraceTo = TracerEndPoint;
-				HitScanTrace.SurfaceType = SurfaceType;
-			}
-
+		//	if (Role == ROLE_Authority)
+		//	{
+		//		HitScanTrace.TraceTo = TracerEndPoint;
+		//		HitScanTrace.SurfaceType = SurfaceType;
+		//	}
+		
 			LastFireTime = GetWorld()->TimeSeconds;
-		}
+			FVector MuzzleLocation = MeshComp->GetSocketLocation(MuzzleSocketName); //+FVector(100.f);
+			FRotator MuzzleRotation = MeshComp->GetSocketRotation(MuzzleSocketName);
+			GetOwner()->GetActorEyesViewPoint(MuzzleLocation, MuzzleRotation);
+		//GetOwner()->GetActorEyesViewPoint(MuzzleLocation, MuzzleRotation);
+			MuzzleRotation.Pitch -= 90;
+			UGameplayStatics::SpawnEmitterAttached(MuzzleEffect, MeshComp, NAME_None,MuzzleLocation,MuzzleRotation);
+			FActorSpawnParameters SpawnParams;
+			SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			auto Bullet = GetWorld()->SpawnActor<ABullet>(Projectile, MuzzleLocation, MuzzleRotation,SpawnParams);
+		Bullet->Inst= MyOwner->GetInstigatorController();
+		Bullet->MyOwner = MyOwner;
+		//}
 	}
 	else
 	{
@@ -186,7 +178,7 @@ void ADWeapon::OnRep_HitScanTrace()
 {
 	// Play cosmetic FX
 	PlayFireEffects(HitScanTrace.TraceTo);
-	PlayImpactEffects(HitScanTrace.SurfaceType, HitScanTrace.TraceTo);
+	
 }
 void ADWeapon::ServerFire_Implementation()
 {
@@ -212,16 +204,29 @@ void ADWeapon::StopFire()
 
 void ADWeapon::ReloadWeapon()
 {
-	if(flag)
+	if (TotalBullets > 0||CurrentMagSize!=DefaultMagSize)
 	{
-		flag = false;
-		GetWorldTimerManager().SetTimer(TimerHandle_ReloadTime, this, &ADWeapon::ReloadWeapon, 3.0f, false,3.f);
-		TotalBullets -= DefaultMagSize - CurrentMagSize;
-		CurrentMagSize = DefaultMagSize;
+		
+		bReload = true;
+			GetWorldTimerManager().SetTimer(TimerHandle_ReloadTime, this, &ADWeapon::AutoReloadWeapon, 3.0f, false);
+		
 		
 	}
-	TotalBullets -= DefaultMagSize - CurrentMagSize;
-	CurrentMagSize = DefaultMagSize;
+}
+
+void ADWeapon::AutoReloadWeapon()
+{
+	if ((CurrentMagSize + TotalBullets) < (DefaultMagSize))
+	{
+		CurrentMagSize += TotalBullets;
+		TotalBullets = 0;
+	}
+	else
+	{
+		TotalBullets -= DefaultMagSize - CurrentMagSize;
+		CurrentMagSize = DefaultMagSize;
+	}
+	bReload = false;
 	
 }
 
@@ -238,5 +243,5 @@ void ADWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetime
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME_CONDITION(ADWeapon, HitScanTrace, COND_SkipOwner);
+	DOREPLIFETIME_CONDITION(ADWeapon,HitScanTrace, COND_SkipOwner);
 }

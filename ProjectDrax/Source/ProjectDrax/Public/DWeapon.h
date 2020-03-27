@@ -9,7 +9,7 @@
 #include "DWeapon.generated.h"
 
 USTRUCT()
-struct FHitScanTrace
+struct FMuzzle
 {
 	GENERATED_BODY()
 
@@ -24,16 +24,28 @@ public:
 	
 };
 UCLASS()
+
 class PROJECTDRAX_API ADWeapon : public AActor
 {
 	GENERATED_BODY()
 	
 public:
-	int GetBullets() const;
+	//AController* GetInst();
+	
 	// Sets default values for this actor's properties
 	ADWeapon();
-	//class ADCharacter* c;
+	UPROPERTY(EditAnywhere)
+		TSubclassOf<AActor> Projectile;
+	UPROPERTY(BlueprintReadWrite)
+	bool bIsADS;
 	bool flag;
+	UFUNCTION(BlueprintImplementableEvent)
+		void ShowADSOverlay();
+	UFUNCTION(BlueprintImplementableEvent)
+		void HideADSOverlay();
+	void ToggleADS();
+	UPROPERTY(BlueprintReadWrite, Category = "Fire")
+		bool bReload;
 	FTimerHandle TimerHandle_ReloadTime;
 
 	UPROPERTY()
@@ -42,17 +54,14 @@ public:
 	class USkeletalMeshComponent* MeshComp;
 	void PlayFireEffects(FVector TraceEnd);
 
-	void PlayImpactEffects(EPhysicalSurface SurfaceType, FVector ImpactPoint);
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
 		int DefaultMagSize;
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
-		int CurrentMagSize;
+	 	int CurrentMagSize;
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
 		int TotalBullets;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
-		TSubclassOf<UDamageType> DamageType;
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
 		FName MuzzleSocketName;
@@ -63,20 +72,15 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
 		UParticleSystem* MuzzleEffect;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
-		UParticleSystem* DefaultImpactEffect;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
-		UParticleSystem* FleshImpactEffect;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
-		UParticleSystem* TracerEffect;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
 		TSubclassOf<UCameraShake> FireCamShake;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
-		float BaseDamage;
+	UPROPERTY(ReplicatedUsing = OnRep_HitScanTrace)
+		FMuzzle HitScanTrace;
+
+	UFUNCTION()
+		void OnRep_HitScanTrace();
 
 	void Fire();
 
@@ -99,11 +103,6 @@ public:
 	// Derived from RateOfFire
 	float TimeBetweenShots;
 
-	UPROPERTY(ReplicatedUsing = OnRep_HitScanTrace)
-		FHitScanTrace HitScanTrace;
-
-	UFUNCTION()
-		void OnRep_HitScanTrace();
 
 public:
 
@@ -112,6 +111,8 @@ public:
 	void StopFire();
 
 	void ReloadWeapon();
+
+	void AutoReloadWeapon();
 
 	//void ResetMagBullets();
 
