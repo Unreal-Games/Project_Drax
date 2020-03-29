@@ -2,11 +2,13 @@
 
 #pragma once
 
+#include "Components/BoxComponent.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "DCharacter.generated.h"
 
 
+class ADWeapon;
 class USpringArmComponent;
 class UCameraComponent;
 struct FTimerHandle;
@@ -40,6 +42,11 @@ protected:
 
 	void BeginFire();
 	void EndFire();
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Collision)
+		UBoxComponent* CollisionComp;
+
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	class UUDHealthComponent* HealthComp;
 
@@ -57,15 +64,20 @@ void StandUp();
 
 	void EndSprint();
 
-	
+	UFUNCTION()
+		void OnCollision(UPrimitiveComponent* OverlappedComp,AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 	void BeginZoom();
+	void ProcessWeaponPickup(ADWeapon* Weapon);
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Inventory)
+		TArray<class ADWeapon*> Inventory;
 
 	void EndZoom();
 
 	FTimerHandle InputTimeHandle;
 
-	
+	void PickUP();
 
 UPROPERTY(BlueprintReadOnly,Category="prone")
 bool bProne;
@@ -80,6 +92,10 @@ float SprintValue;
 		UCameraComponent* CameraComp;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		USpringArmComponent* SpringArmComp;
+
+	void NextWeapon();
+	void PrevWeapon();
+	void EquipWeapon(ADWeapon* Weapon);
 
 public:	
 	// Called every frame

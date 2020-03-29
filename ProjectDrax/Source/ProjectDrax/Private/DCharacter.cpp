@@ -8,12 +8,14 @@
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "DWeapon.h"
-#include "Bullet.h"
+#include "Components/BoxComponent.h"
 #include "ProjectDrax.h"
 #include "Components/UDHealthComponent.h"
+#include "DrawDebugHelpers.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "TimerManager.h"
+#include "Containers/Array.h"
 #include "UnrealNetwork.h"
 
 // Sets default values
@@ -21,6 +23,9 @@ ADCharacter::ADCharacter()
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	CollisionComp = CreateDefaultSubobject<UBoxComponent>(TEXT( "CollisionComp"));
+	CollisionComp->SetupAttachment(RootComponent);
+	
 	SpringArmComp = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArmComp"));
 	SpringArmComp->bUsePawnControlRotation = true;
 	SpringArmComp->SetupAttachment(RootComponent);
@@ -35,7 +40,7 @@ ADCharacter::ADCharacter()
 
 	WeaponAttachSocketName = "GunSocket";
 
-	
+	Inventory.Init(nullptr, 3);
 }
 
 void ADCharacter::AddControllerPitchInput(float Val)
@@ -159,6 +164,121 @@ void ADCharacter::BeginZoom()
 	}
 }
 
+void ADCharacter::ProcessWeaponPickup(ADWeapon* Weapon)
+{
+	UE_LOG(LogTemp,Warning,TEXT("asd"))
+	if (Weapon != NULL)
+	{
+		if (Inventory[Weapon->WeaponConfig.Priority] == NULL)
+		{
+			ADWeapon* Spawner = GetWorld()->SpawnActor<ADWeapon>(Weapon->GetClass());
+			if (Spawner)
+			{
+				Inventory[Spawner->WeaponConfig.Priority] = Spawner;
+				GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "You Just picked up a " + Inventory[Spawner->WeaponConfig.Priority]->WeaponConfig.Name);
+			}
+			if(!CurrentWeapon)
+			{
+				Weapon->SetOwner(this);
+				Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachSocketName);
+				
+			}
+			else
+			{
+				Weapon->SetOwner(this);
+				Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, "Weapon1");
+
+			}
+		}
+		else
+		{
+			if (Inventory[Weapon->WeaponConfig.Priority]->CurrentAmmo >= 0 && Weapon->CurrentAmmo <= (Inventory[Weapon->WeaponConfig.Priority]->WeaponConfig.MaxAmmo - Inventory[Weapon->WeaponConfig.Priority]->CurrentAmmo))
+			{
+				Inventory[Weapon->WeaponConfig.Priority]->CurrentAmmo += Weapon->CurrentAmmo;
+				GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, "Added " + Weapon->CurrentAmmo);
+				Weapon->Destroy();
+			}
+			else
+			{
+				if (Inventory[Weapon->WeaponConfig.Priority]->CurrentAmmo > Inventory[Weapon->WeaponConfig.Priority]->WeaponConfig.MaxAmmo)
+				{
+					Inventory[Weapon->WeaponConfig.Priority]->CurrentAmmo = Inventory[Weapon->WeaponConfig.Priority]->WeaponConfig.MaxAmmo;
+				}
+			}
+		}
+	}
+}
+
+
+void ADCharacter::NextWeapon()
+{
+	if (Inventory[CurrentWeapon->WeaponConfig.Priority]->WeaponConfig.Priority != 2)
+	{
+		if (Inventory[CurrentWeapon->WeaponConfig.Priority + 1] == NULL)
+		{
+			for (int32 i = CurrentWeapon->WeaponConfig.Priority + 1; i < Inventory.Num(); i++)
+			{
+				if (Inventory[i] && Inventory[i]->IsA(ADWeapon::StaticClass()))
+				{
+					EquipWeapon(Inventory[i]);
+				}
+			}
+		}
+		else
+		{
+			EquipWeapon(Inventory[CurrentWeapon->WeaponConfig.Priority + 1]);
+		}
+	}
+	else
+	{
+		EquipWeapon(Inventory[CurrentWeapon->WeaponConfig.Priority]);
+	}
+}
+
+void ADCharacter::PrevWeapon()
+{
+	if (Inventory[CurrentWeapon->WeaponConfig.Priority]->WeaponConfig.Priority != 0)
+	{
+		if (Inventory[CurrentWeapon->WeaponConfig.Priority - 1] == NULL)
+		{
+			for (int32 i = CurrentWeapon->WeaponConfig.Priority - 1; i >= 0; i--)
+			{
+				if (Inventory[i] && Inventory[i]->IsA(ADWeapon::StaticClass()))
+				{
+					EquipWeapon(Inventory[i]);
+				}
+			}
+		}
+		else
+		{
+			EquipWeapon(Inventory[CurrentWeapon->WeaponConfig.Priority - 1]);
+		}
+	}
+	else
+	{
+		EquipWeapon(Inventory[CurrentWeapon->WeaponConfig.Priority]);
+	}
+}
+
+void ADCharacter::EquipWeapon(ADWeapon * Weapon)
+{
+	if (CurrentWeapon != NULL)
+	{
+		CurrentWeapon = Inventory[CurrentWeapon->WeaponConfig.Priority];
+		CurrentWeapon->OnUnEquip();
+		CurrentWeapon = Weapon;
+		Weapon->SetOwningPawn(this);
+		Weapon->OnEquip();
+	}
+	else
+	{
+		CurrentWeapon = Weapon;
+		CurrentWeapon = Inventory[CurrentWeapon->WeaponConfig.Priority];
+		CurrentWeapon->SetOwningPawn(this);
+		Weapon->OnEquip();
+	}
+}
+
 void ADCharacter::EndZoom()
 {
 	if (CurrentWeapon)
@@ -166,6 +286,26 @@ void ADCharacter::EndZoom()
 		CameraComp->SetFieldOfView(90.f);
 		CurrentWeapon->ToggleADS();
 		
+	}
+}
+
+void ADCharacter::PickUP()
+{
+	FHitResult Hit;
+	FVector Start;
+	FRotator Rot;
+	GetActorEyesViewPoint(Start, Rot);
+	FVector End = Start + Rot.Vector() * 1000;
+	GetWorld()->LineTraceSingleByChannel(Hit, Start, End,ECC_Visibility);
+	DrawDebugLine(GetWorld(), Start, End, FColor::Red, true);
+	if(Hit.GetActor())
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, FString::Printf(TEXT("%s"),*Hit.GetActor()->GetName()));
+		ADWeapon* Weapon = Cast<ADWeapon>(Hit.GetActor());
+		if (Weapon)
+		{
+			ProcessWeaponPickup(Weapon);
+		}
 	}
 }
 
@@ -179,6 +319,16 @@ void ADCharacter::EndSprint()
 	float speed=GetCharacterMovement()->MaxWalkSpeed /= SprintValue;
 	UE_LOG(LogTemp, Warning, TEXT("Speed= %f"), speed);
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Speed: %f"), speed));
+}
+
+void ADCharacter::OnCollision(UPrimitiveComponent* OverlappedComp,AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
+	const FHitResult& SweepResult)
+{
+	ADWeapon* Weapon = Cast<ADWeapon>(OtherActor);
+	if (Weapon)
+	{
+		ProcessWeaponPickup(Weapon);
+	}
 }
 
 // Called every frame
@@ -254,6 +404,7 @@ void ADCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindAction("ADS", IE_Pressed, this, &ADCharacter::BeginZoom);
 	PlayerInputComponent->BindAction("ADS", IE_Released, this, &ADCharacter::EndZoom);
 
+	PlayerInputComponent->BindAction("PickUP", IE_Pressed, this, &ADCharacter::PickUP);
 	
 	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &ADCharacter::ReloadWeapon);
 	
