@@ -64,9 +64,7 @@ void StandUp();
 
 	void EndSprint();
 
-	UFUNCTION()
-		void OnCollision(UPrimitiveComponent* OverlappedComp,AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
-
+	
 	void BeginZoom();
 	void ProcessWeaponPickup(ADWeapon* Weapon);
 
@@ -109,6 +107,18 @@ public:
 
 	UPROPERTY(VisibleDefaultsOnly, Category = "Player")
 		FName WeaponAttachSocketName;
+	
+	UPROPERTY(VisibleDefaultsOnly, Category = "Player")
+		FName SecondaryWeaponSocket;
+	
+	UPROPERTY(VisibleDefaultsOnly, Category = "Player")
+		FName PrimaryWeaponSocket;
+	
+	UPROPERTY(VisibleDefaultsOnly, Category = "Player")
+		bool bPrimarySocketEquiped;
+	
+	UPROPERTY(VisibleDefaultsOnly, Category = "Player")
+		bool bSecondarySocketEquiped;
 	virtual FVector GetPawnViewLocation() const override;
 	class ADWeapon* CurrentWeapon;
 	UPROPERTY(BlueprintReadOnly, Category = "prone")

@@ -41,6 +41,11 @@ ADCharacter::ADCharacter()
 	WeaponAttachSocketName = "GunSocket";
 
 	Inventory.Init(nullptr, 3);
+	PrimaryWeaponSocket = "Weapon1";
+	
+	SecondaryWeaponSocket = "Weapon2";
+	bPrimarySocketEquiped = false;
+	bSecondarySocketEquiped = false;
 }
 
 void ADCharacter::AddControllerPitchInput(float Val)
@@ -181,31 +186,22 @@ void ADCharacter::ProcessWeaponPickup(ADWeapon* Weapon)
 			{
 				Weapon->SetOwner(this);
 				Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachSocketName);
-				
+				bPrimarySocketEquiped = true;
 			}
-			else
+			else if(!bPrimarySocketEquiped)
 			{
 				Weapon->SetOwner(this);
-				Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, "Weapon1");
-
+				Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale,PrimaryWeaponSocket);
+				bPrimarySocketEquiped = true;
+			}
+			else if(!bSecondarySocketEquiped)
+			{
+				Weapon->SetOwner(this);
+				Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SecondaryWeaponSocket);
+				bSecondarySocketEquiped = true;
 			}
 		}
-		else
-		{
-			if (Inventory[Weapon->WeaponConfig.Priority]->CurrentAmmo >= 0 && Weapon->CurrentAmmo <= (Inventory[Weapon->WeaponConfig.Priority]->WeaponConfig.MaxAmmo - Inventory[Weapon->WeaponConfig.Priority]->CurrentAmmo))
-			{
-				Inventory[Weapon->WeaponConfig.Priority]->CurrentAmmo += Weapon->CurrentAmmo;
-				GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, "Added " + Weapon->CurrentAmmo);
-				Weapon->Destroy();
-			}
-			else
-			{
-				if (Inventory[Weapon->WeaponConfig.Priority]->CurrentAmmo > Inventory[Weapon->WeaponConfig.Priority]->WeaponConfig.MaxAmmo)
-				{
-					Inventory[Weapon->WeaponConfig.Priority]->CurrentAmmo = Inventory[Weapon->WeaponConfig.Priority]->WeaponConfig.MaxAmmo;
-				}
-			}
-		}
+		
 	}
 }
 
@@ -321,15 +317,7 @@ void ADCharacter::EndSprint()
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Speed: %f"), speed));
 }
 
-void ADCharacter::OnCollision(UPrimitiveComponent* OverlappedComp,AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
-	const FHitResult& SweepResult)
-{
-	ADWeapon* Weapon = Cast<ADWeapon>(OtherActor);
-	if (Weapon)
-	{
-		ProcessWeaponPickup(Weapon);
-	}
-}
+
 
 // Called every frame
 void ADCharacter::Tick(float DeltaTime)
@@ -405,6 +393,9 @@ void ADCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindAction("ADS", IE_Released, this, &ADCharacter::EndZoom);
 
 	PlayerInputComponent->BindAction("PickUP", IE_Pressed, this, &ADCharacter::PickUP);
+
+	PlayerInputComponent->BindAction("NextWeapon", IE_Pressed, this, &ADCharacter::NextWeapon);
+	PlayerInputComponent->BindAction("PrevWeapon", IE_Pressed, this, &ADCharacter::PrevWeapon);
 	
 	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &ADCharacter::ReloadWeapon);
 	
