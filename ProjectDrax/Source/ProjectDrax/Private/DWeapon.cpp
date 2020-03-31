@@ -71,15 +71,19 @@ void ADWeapon::AttachToPlayer()
 		DetachFromPlayer();
 
 		USkeletalMeshComponent* Character = MyPawn->GetMesh();
-		MeshComp->SetHiddenInGame(false);
+		
 		MeshComp->AttachTo(Character, "GunSocket");
 	}
 }
 
 void ADWeapon::DetachFromPlayer()
 {
-	MeshComp->DetachFromParent();
-	MeshComp->SetHiddenInGame(true);
+
+	Super::DetachRootComponentFromParent();
+	DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+	
+	
+
 }
 
 void ADWeapon::OnEquip()
@@ -90,7 +94,9 @@ void ADWeapon::OnEquip()
 
 void ADWeapon::OnUnEquip()
 {
+
 	DetachFromPlayer();
+	CollisionComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 }
 
 UAudioComponent* ADWeapon::PlayWeaponSound(USoundCue* Sound)
@@ -163,7 +169,12 @@ void ADWeapon::ProcessInstantHit(const FHitResult& Impact, const FVector& Origin
 			ActualDamage /= 3;
 		}
 		GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, "YOU HIT AN ENEMY!!");
-		UGameplayStatics::ApplyPointDamage(Enemy, ActualDamage, Origin, Impact, GetOwner()->GetInstigatorController(), this, DamageType);
+		AController* cont;
+		if (Instigator)
+			cont = Instigator->GetController();
+		else
+			cont =GetOwner()->GetInstigatorController();
+		UGameplayStatics::ApplyPointDamage(Enemy, ActualDamage, Origin, Impact,cont, this, DamageType);
 	}
 }
 

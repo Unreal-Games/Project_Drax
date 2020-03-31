@@ -42,7 +42,7 @@ protected:
 
 	void BeginFire();
 	void EndFire();
-	
+	int32 CurrentWeaponIndex;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Collision)
 		UBoxComponent* CollisionComp;
 
@@ -124,7 +124,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "prone")
 		bool bFire ;
 	
-	
+	bool bCurrentWeaponEquiped;
 
 	UFUNCTION()
 		void OnHealthChanged(UUDHealthComponent* OwningHealthComp, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);

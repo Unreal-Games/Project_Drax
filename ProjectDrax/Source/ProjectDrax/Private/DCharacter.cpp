@@ -84,6 +84,10 @@ void ADCharacter::BeginPlay()
 		CurrentWeapon->SetOwner(this);
 		CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachSocketName);
 		//UE_LOG(LogTemp, Warning, TEXT("Socket:%s"), *(WeaponAttachSocketName.ToString()))
+		CurrentWeaponIndex = 0;
+		bCurrentWeaponEquiped = true;
+	//	bPrimarySocketEquiped = true;
+		Inventory[0] = CurrentWeapon;
 	}
 	
 	bProning=false;
@@ -171,36 +175,101 @@ void ADCharacter::BeginZoom()
 
 void ADCharacter::ProcessWeaponPickup(ADWeapon* Weapon)
 {
-	UE_LOG(LogTemp,Warning,TEXT("asd"))
+	UE_LOG(LogTemp, Warning, TEXT("Pickup called"))
 	if (Weapon != NULL)
 	{
-		if (Inventory[Weapon->WeaponConfig.Priority] == NULL)
+		UE_LOG(LogTemp, Warning, TEXT("WeaponSpotted"))
+		if (Weapon->GetOwner()==NULL)
 		{
 			ADWeapon* Spawner = GetWorld()->SpawnActor<ADWeapon>(Weapon->GetClass());
 			if (Spawner)
 			{
+				/*UE_LOG(LogTemp, Warning, TEXT("Spawner"))
 				Inventory[Spawner->WeaponConfig.Priority] = Spawner;
 				GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "You Just picked up a " + Inventory[Spawner->WeaponConfig.Priority]->WeaponConfig.Name);
-			}
-			if(!CurrentWeapon)
-			{
-				Weapon->SetOwner(this);
-				Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachSocketName);
 				bPrimarySocketEquiped = true;
+				bCurrentWeaponEquiped = true;*/
+				if(!bPrimarySocketEquiped)
+				GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "You Just true up a "  );
+
+				if (!((bCurrentWeaponEquiped && bSecondarySocketEquiped) || (bCurrentWeaponEquiped&& bPrimarySocketEquiped)||(bPrimarySocketEquiped&&bSecondarySocketEquiped)))
+				{
+					if (!CurrentWeapon)
+					{
+						UE_LOG(LogTemp, Warning, TEXT("CurrentWeapon"))
+							Inventory[0] = Spawner;
+						Weapon->SetOwningPawn(this);
+						if (!Inventory[0])
+						{
+							Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachSocketName);
+							
+							Inventory[0] = Weapon;
+						}
+						else if (!Inventory[1])
+						{
+							Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachSocketName);
+							
+							Inventory[1] = Weapon;
+						}
+						CurrentWeapon = Weapon;
+						bCurrentWeaponEquiped = true;
+					}
+					else if (!Inventory[1])
+					{
+						UE_LOG(LogTemp, Warning, TEXT("Secondary"))
+							Inventory[1] = Spawner;
+						Weapon->SetOwningPawn(this);
+						Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SecondaryWeaponSocket);
+						bSecondarySocketEquiped = true;
+					}
+					else if (!Inventory[0])
+					{
+						UE_LOG(LogTemp, Warning, TEXT("Primary"))
+							Inventory[0] = Spawner;
+						Weapon->SetOwningPawn(this);
+						Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, PrimaryWeaponSocket);
+						bPrimarySocketEquiped = true;
+					}
+				}
+				else
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Swap"))
+						if (bCurrentWeaponEquiped)
+						{
+							UE_LOG(LogTemp, Warning, TEXT("CurrentSwap"))
+								//Inventory[0]->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+								int Swap;
+								for(int i=0;i<2;i++)
+								{
+									if(Inventory[i]==CurrentWeapon)
+									{
+										Swap = i;
+									}
+								}
+								CurrentWeapon->OnUnEquip();
+							CurrentWeapon->SetOwner(NULL);
+							Weapon->SetOwningPawn(this);
+							Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachSocketName);
+							CurrentWeapon = Weapon;
+						
+							Inventory[Swap] = Weapon;
+						}
+						else
+						{
+							UE_LOG(LogTemp, Warning, TEXT("SecSwap"))
+								Inventory[1]->OnUnEquip();
+							Inventory[1]->SetOwner(NULL);
+							Weapon->SetOwningPawn(this);
+							Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SecondaryWeaponSocket);
+
+							Inventory[1] = Weapon;
+						}
+				}
 			}
-			else if(!bPrimarySocketEquiped)
-			{
-				Weapon->SetOwner(this);
-				Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale,PrimaryWeaponSocket);
-				bPrimarySocketEquiped = true;
-			}
-			else if(!bSecondarySocketEquiped)
-			{
-				Weapon->SetOwner(this);
-				Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SecondaryWeaponSocket);
-				bSecondarySocketEquiped = true;
-			}
-		}
+			
+			
+			
+		}UE_LOG(LogTemp, Warning, TEXT("WEapon Dont have priority"))
 		
 	}
 }
@@ -208,70 +277,99 @@ void ADCharacter::ProcessWeaponPickup(ADWeapon* Weapon)
 
 void ADCharacter::NextWeapon()
 {
-	if (Inventory[CurrentWeapon->WeaponConfig.Priority]->WeaponConfig.Priority != 2)
+	CurrentWeaponIndex += 1;
+	if(CurrentWeaponIndex>2)
 	{
-		if (Inventory[CurrentWeapon->WeaponConfig.Priority + 1] == NULL)
-		{
-			for (int32 i = CurrentWeapon->WeaponConfig.Priority + 1; i < Inventory.Num(); i++)
-			{
-				if (Inventory[i] && Inventory[i]->IsA(ADWeapon::StaticClass()))
-				{
-					EquipWeapon(Inventory[i]);
-				}
-			}
-		}
-		else
-		{
-			EquipWeapon(Inventory[CurrentWeapon->WeaponConfig.Priority + 1]);
-		}
+		CurrentWeaponIndex = 0;	
+	}
+	if (CurrentWeaponIndex == 0)
+	{
+		bPrimarySocketEquiped = false;
+
 	}
 	else
-	{
-		EquipWeapon(Inventory[CurrentWeapon->WeaponConfig.Priority]);
-	}
+		bSecondarySocketEquiped = false;
+	
+	EquipWeapon(Inventory[CurrentWeaponIndex]);
 }
 
 void ADCharacter::PrevWeapon()
 {
-	if (Inventory[CurrentWeapon->WeaponConfig.Priority]->WeaponConfig.Priority != 0)
+	CurrentWeaponIndex -= 1;
+	if (CurrentWeaponIndex < 0)
 	{
-		if (Inventory[CurrentWeapon->WeaponConfig.Priority - 1] == NULL)
-		{
-			for (int32 i = CurrentWeapon->WeaponConfig.Priority - 1; i >= 0; i--)
-			{
-				if (Inventory[i] && Inventory[i]->IsA(ADWeapon::StaticClass()))
-				{
-					EquipWeapon(Inventory[i]);
-				}
-			}
-		}
-		else
-		{
-			EquipWeapon(Inventory[CurrentWeapon->WeaponConfig.Priority - 1]);
-		}
+		CurrentWeaponIndex = 2;
+	}
+	if (CurrentWeaponIndex == 0)
+	{
+		bPrimarySocketEquiped = false;
+
 	}
 	else
-	{
-		EquipWeapon(Inventory[CurrentWeapon->WeaponConfig.Priority]);
-	}
+		bSecondarySocketEquiped = false;
+	
+	EquipWeapon(Inventory[CurrentWeaponIndex]);
 }
 
 void ADCharacter::EquipWeapon(ADWeapon * Weapon)
 {
-	if (CurrentWeapon != NULL)
+	if (Weapon)
 	{
-		CurrentWeapon = Inventory[CurrentWeapon->WeaponConfig.Priority];
-		CurrentWeapon->OnUnEquip();
-		CurrentWeapon = Weapon;
-		Weapon->SetOwningPawn(this);
-		Weapon->OnEquip();
+		if (CurrentWeapon != NULL)
+		{
+			//CurrentWeapon = Inventory[CurrentWeaponIndex];
+			CurrentWeapon->OnUnEquip();
+			if (!Inventory[0])
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "Primary Swaping : " + Inventory[CurrentWeaponIndex]->WeaponConfig.Name+"with "+CurrentWeapon->WeaponConfig.Name);
+
+				CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, PrimaryWeaponSocket);
+				bPrimarySocketEquiped = true;
+			}
+			else
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "Secondary Swaping : " + Inventory[CurrentWeaponIndex]->WeaponConfig.Name + "with " + CurrentWeapon->WeaponConfig.Name);
+
+				CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SecondaryWeaponSocket);
+				bSecondarySocketEquiped = true;
+			}
+			CurrentWeapon = Weapon;
+			Weapon->SetOwningPawn(this);
+			Weapon->OnUnEquip();
+			//Weapon->OnEquip();
+			CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachSocketName);
+
+			
+		}
+		else
+		{
+			Weapon->OnUnEquip();
+			CurrentWeapon = Weapon;
+			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "Current weapon initialsied : " + Inventory[CurrentWeaponIndex]->WeaponConfig.Name + "with " + CurrentWeapon->WeaponConfig.Name);
+
+			//CurrentWeapon = Inventory[CurrentWeaponIndex];
+			CurrentWeapon->SetOwningPawn(this);
+			//Weapon->OnEquip();
+			CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachSocketName);
+
+			bCurrentWeaponEquiped = true;
+		}
 	}
 	else
 	{
-		CurrentWeapon = Weapon;
-		CurrentWeapon = Inventory[CurrentWeapon->WeaponConfig.Priority];
-		CurrentWeapon->SetOwningPawn(this);
-		Weapon->OnEquip();
+
+		if (CurrentWeapon != NULL)
+		{
+			CurrentWeapon->OnUnEquip();
+			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "Swaping Null with " + CurrentWeapon->WeaponConfig.Name);
+
+				CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, PrimaryWeaponSocket);
+				CurrentWeapon = Weapon;
+				//CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachSocketName);
+
+				//Weapon->SetOwningPawn(this);
+			bCurrentWeaponEquiped = false;
+		}
 	}
 }
 
