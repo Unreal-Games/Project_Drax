@@ -44,7 +44,7 @@ ADWeapon::ADWeapon()
 	MinNetUpdateFrequency = 33.0f;
 	//BaseDamage = 20.f;
 	
-
+	bReload = false;
 }
 
 void ADWeapon::ToggleADS()
@@ -263,7 +263,6 @@ void ADWeapon::Fire()
 		}
 		else
 		{
-			flag = true;
 			ReloadWeapon();
 		}
 	}LastFireTime = GetWorld()->TimeSeconds;
@@ -298,17 +297,10 @@ void ADWeapon::StopFire()
 
 void ADWeapon::ReloadWeapon()
 {
-	if (CurrentAmmo > 0)
+	bReload = true;
+	if (CurrentAmmo > 0||CurrentClip<WeaponConfig.MaxClip)
 	{
-		if (CurrentAmmo < WeaponConfig.MaxClip)
-		{
-			CurrentClip = CurrentAmmo;
-		}
-		else
-		{
-			CurrentAmmo -= WeaponConfig.MaxClip;
-			CurrentClip += WeaponConfig.MaxClip;
-		}
+		GetWorldTimerManager().SetTimer(TimerHandle_ReloadTime, this, &ADWeapon::AutoReloadWeapon, 2.1f, false);
 	}
 	else
 	{
@@ -318,22 +310,18 @@ void ADWeapon::ReloadWeapon()
 
 void ADWeapon::AutoReloadWeapon()
 {
-	if (CurrentAmmo > 0)
-	{
+	
 		if (CurrentAmmo < WeaponConfig.MaxClip)
 		{
 			CurrentClip = CurrentAmmo;
+			CurrentAmmo = 0;
 		}
 		else
 		{
-			CurrentAmmo -= WeaponConfig.MaxClip;
-			CurrentClip += WeaponConfig.MaxClip;
+			CurrentAmmo -= WeaponConfig.MaxClip+CurrentClip;
+			CurrentClip = WeaponConfig.MaxClip;
 		}
-	}
-	else
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 2.0, FColor::Blue, "NO AMMO");
-	}
+		bReload = false;
 	
 }
 
