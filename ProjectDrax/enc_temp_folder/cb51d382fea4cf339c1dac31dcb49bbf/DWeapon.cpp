@@ -298,7 +298,6 @@ void ADWeapon::StopFire()
 
 void ADWeapon::ReloadWeapon()
 {
-	bReload = true;
 	if (CurrentAmmo > 0)
 	{
 		if (CurrentAmmo < WeaponConfig.MaxClip)

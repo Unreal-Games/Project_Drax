@@ -4,13 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
-#include "ProjectDraxGameModeBase.generated.h"
+#include "DGameMode.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class PROJECTDRAX_API AProjectDraxGameModeBase : public AGameModeBase
+class PROJECTDRAX_API ADGameMode : public AGameModeBase
 {
 	GENERATED_BODY()
 	

@@ -121,7 +121,7 @@ public:
 	UPROPERTY(VisibleDefaultsOnly, Category = "Player")
 		bool bSecondarySocketEquiped;
 	virtual FVector GetPawnViewLocation() const override;
-	UPROPERTY(Replicated,BlueprintReadWrite)
+	UPROPERTY(Replicated)
 	class ADWeapon* CurrentWeapon;
 	UPROPERTY(BlueprintReadOnly, Category = "prone")
 		bool bFire ;
