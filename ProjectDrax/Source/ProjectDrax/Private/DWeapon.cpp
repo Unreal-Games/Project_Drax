@@ -26,7 +26,9 @@ FAutoConsoleVariableRef CVARDebugWeaponDrawing(
 	TEXT("Draw Debug Lines for Weapons"),
 	ECVF_Cheat);
 
-
+///@todo adding annimation for pickups and weapon equip
+///@todo addingsound damage effects
+///@todo Replicating for Multiplayer
 
 ADWeapon::ADWeapon()
 {
