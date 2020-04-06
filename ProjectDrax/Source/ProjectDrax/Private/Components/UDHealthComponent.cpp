@@ -2,10 +2,13 @@
 
 
 #include "Components/UDHealthComponent.h"
-//#include "UDHealthComponent.h"
 
+
+
+#include "DGameMode.h"
+#include "Engine/World.h"
 #include "GameFramework/Actor.h"
-#include "UnrealNetwork.h"
+#include "Net/UnrealNetwork.h"
 
 
 // Sets default values for this component's properties
@@ -28,11 +31,11 @@ void UUDHealthComponent::BeginPlay()
 	Super::BeginPlay();
 	if (GetOwnerRole() == ROLE_Authority)
 	{
-	AActor* MyOwner = GetOwner();
-	if (MyOwner)
-	{
-		MyOwner->OnTakeAnyDamage.AddDynamic(this, &UUDHealthComponent::HandleTakeAnyDamage);
-	}
+		AActor* MyOwner = GetOwner();
+		if (MyOwner)
+		{
+			MyOwner->OnTakeAnyDamage.AddDynamic(this, &UUDHealthComponent::HandleTakeAnyDamage);
+		}
 	}
 
 		Health = DefaultHealth;
@@ -49,12 +52,24 @@ void UUDHealthComponent::OnRep_Health(float OldHealth)
 void UUDHealthComponent::HandleTakeAnyDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType,
 	AController* InstigatedBy, AActor* DamageCauser)
 {
-	if (Damage <= 0.0f)
+	if (Damage <= 0.0f || bIsDead)
 		return;
-
+	if (DamageCauser != DamagedActor && IsFriendly(DamagedActor, DamageCauser))
+	{
+		return;
+	}
 	Health = FMath::Clamp(Health - Damage, 0.0f, DefaultHealth);
 	UE_LOG(LogTemp, Log, TEXT("Health Changed:%s"), *( FString::SanitizeFloat(Health)));
+	bIsDead = Health <= 0.0f;
 	OnHealthChanged.Broadcast(this, Health, Damage, DamageType, InstigatedBy, DamageCauser);
+	if (bIsDead)
+	{
+		ADGameMode* GM = Cast<ADGameMode>(GetWorld()->GetAuthGameMode());
+		if (GM)
+		{
+			GM->OnActorKilled.Broadcast(GetOwner(), DamageCauser, InstigatedBy);
+		}
+	}
 }
 
 float UUDHealthComponent::GetHealth() const
@@ -96,7 +111,7 @@ bool UUDHealthComponent::IsFriendly(AActor* ActorA, AActor* ActorB)
 	return HealthCompA->TeamNum == HealthCompB->TeamNum;
 }
 
-
+//
 //void UUDHealthComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 //{
 //	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
