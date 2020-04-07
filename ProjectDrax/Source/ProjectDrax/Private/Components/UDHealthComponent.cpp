@@ -18,7 +18,7 @@ UUDHealthComponent::UUDHealthComponent()
 	DefaultHealth = 100;
 	bIsDead = false;
 
-	TeamNum = 255;
+	//TeamNum = 255;
 
 	SetIsReplicated(true);
 	
@@ -52,10 +52,13 @@ void UUDHealthComponent::OnRep_Health(float OldHealth)
 void UUDHealthComponent::HandleTakeAnyDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType,
 	AController* InstigatedBy, AActor* DamageCauser)
 {
+	UE_LOG(LogTemp, Log, TEXT("Health Changed:%s"), *(FString::SanitizeFloat(Health)));
 	if (Damage <= 0.0f || bIsDead)
 		return;
-	if (DamageCauser != DamagedActor && IsFriendly(DamagedActor, DamageCauser))
+	UE_LOG(LogTemp, Log, TEXT("H"))
+	if (DamageCauser == DamagedActor && IsFriendly(DamagedActor, DamageCauser))
 	{
+		UE_LOG(LogTemp, Log, TEXT("Health "))
 		return;
 	}
 	Health = FMath::Clamp(Health - Damage, 0.0f, DefaultHealth);
@@ -101,13 +104,13 @@ bool UUDHealthComponent::IsFriendly(AActor* ActorA, AActor* ActorB)
 
 	UUDHealthComponent* HealthCompA = Cast<UUDHealthComponent>(ActorA->GetComponentByClass(UUDHealthComponent::StaticClass()));
 	UUDHealthComponent* HealthCompB = Cast<UUDHealthComponent>(ActorB->GetComponentByClass(UUDHealthComponent::StaticClass()));
-
+	
 	if (HealthCompA == nullptr || HealthCompB == nullptr)
 	{
 		// Assume friendly
 		return true;
 	}
-
+	UE_LOG(LogTemp, Warning, TEXT("Team No.A:%d \nTeam no. B:%d"), HealthCompA->TeamNum, HealthCompB->TeamNum);
 	return HealthCompA->TeamNum == HealthCompB->TeamNum;
 }
 

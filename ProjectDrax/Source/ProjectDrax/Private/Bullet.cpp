@@ -55,7 +55,7 @@ void ABullet::OnProjectileHit(UPrimitiveComponent* HitComp, AActor* OtherActor, 
 {
 	if(OtherActor->IsA(ACharacter::StaticClass()))
 	{
-		UE_LOG(LogTemp,Warning,TEXT("Ds"))
+		
 			if (Hit.BoneName != NAME_None)
 			{
 				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Bone:%s"), *Hit.BoneName.ToString()));

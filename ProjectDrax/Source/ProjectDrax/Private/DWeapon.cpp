@@ -199,17 +199,21 @@ void ADWeapon::Instant_Fire()
 void ADWeapon::ProjectileFire()
 {
 	AActor* MyOwner = GetOwner();
-	FVector MuzzleLocation = MeshComp->GetSocketLocation(WeaponConfig.MuzzleSocketName); //+FVector(100.f);
-	FRotator MuzzleRotation = MeshComp->GetSocketRotation(WeaponConfig.MuzzleSocketName);
-	GetOwner()->GetActorEyesViewPoint(MuzzleLocation, MuzzleRotation);
-	//GetOwner()->GetActorEyesViewPoint(MuzzleLocation, MuzzleRotation);
-	MuzzleRotation.Pitch -= 90;
-	UGameplayStatics::SpawnEmitterAttached(WeaponConfig.MuzzleEffect, MeshComp, NAME_None, MuzzleLocation, MuzzleRotation);
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	auto Bullet = GetWorld()->SpawnActor<ABullet>(Projectile, MuzzleLocation, MuzzleRotation, SpawnParams);
-	Bullet->Inst = MyOwner->GetInstigatorController();
-	Bullet->MyOwner = MyOwner;
+	if(MyOwner)
+	{
+		FVector MuzzleLocation = MeshComp->GetSocketLocation(WeaponConfig.MuzzleSocketName); //+FVector(100.f);
+		FRotator MuzzleRotation = MeshComp->GetSocketRotation(WeaponConfig.MuzzleSocketName);
+		GetOwner()->GetActorEyesViewPoint(MuzzleLocation, MuzzleRotation);
+		//GetOwner()->GetActorEyesViewPoint(MuzzleLocation, MuzzleRotation);
+		MuzzleRotation.Pitch -= 90;
+		UGameplayStatics::SpawnEmitterAttached(WeaponConfig.MuzzleEffect, MeshComp, NAME_None, MuzzleLocation, MuzzleRotation);
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		auto Bullet = GetWorld()->SpawnActor<ABullet>(Projectile, MuzzleLocation, MuzzleRotation, SpawnParams);
+		Bullet->Inst = MyOwner->GetInstigatorController();
+		Bullet->MyOwner = MyOwner;
+
+	}
 	
 }
 
@@ -287,9 +291,13 @@ bool ADWeapon::ServerFire_Validate()
 	
 void ADWeapon::StartFire()
 {
-	float FirstDelay = FMath::Max(LastFireTime + WeaponConfig.TimeBetweenShots - GetWorld()->TimeSeconds, 0.0f);
-	UE_LOG(LogTemp, Warning, TEXT("Start fire called"));
-	GetWorldTimerManager().SetTimer(TimerHandle_TimeBetweenShots, this, &ADWeapon::Fire, WeaponConfig.TimeBetweenShots, true, FirstDelay);
+	if(GetOwner())
+	{
+		float FirstDelay = FMath::Max(LastFireTime + WeaponConfig.TimeBetweenShots - GetWorld()->TimeSeconds, 0.0f);
+		GetWorldTimerManager().SetTimer(TimerHandle_TimeBetweenShots, this, &ADWeapon::Fire, WeaponConfig.TimeBetweenShots, true, FirstDelay);
+
+	}
+	
 }
 
 void ADWeapon::StopFire()

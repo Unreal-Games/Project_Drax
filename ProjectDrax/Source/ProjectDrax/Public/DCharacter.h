@@ -40,9 +40,7 @@ protected:
 
 	void BeginCrouch();
 	void ShowInventory();
-
-	void BeginFire();
-	void EndFire();
+	
 	int32 CurrentWeaponIndex;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Collision)
 		UBoxComponent* CollisionComp;
@@ -128,6 +126,12 @@ public:
 	
 	bool bCurrentWeaponEquiped;
 
+	UFUNCTION(BlueprintCallable, Category = "Player")
+		void BeginFire();
+
+	UFUNCTION(BlueprintCallable, Category = "Player")
+		void EndFire();
+	
 	UFUNCTION()
 		void OnHealthChanged(UUDHealthComponent* OwningHealthComp, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
 

@@ -186,10 +186,10 @@ void ADCharacter::BeginZoom()
 
 void ADCharacter::ProcessWeaponPickup(ADWeapon* Weapon)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Pickup called"))
+	
 	if (Weapon != NULL)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("WeaponSpotted"))
+		
 		if (Weapon->GetOwner()==NULL)
 		{
 			ADWeapon* Spawner = GetWorld()->SpawnActor<ADWeapon>(Weapon->GetClass());
@@ -200,7 +200,7 @@ void ADCharacter::ProcessWeaponPickup(ADWeapon* Weapon)
 				{
 					if (!CurrentWeapon)
 					{
-						UE_LOG(LogTemp, Warning, TEXT("CurrentWeapon"))
+						
 							//Inventory[0] = Spawner;
 						Weapon->SetOwningPawn(this);
 						if (!Inventory[0])
@@ -224,7 +224,7 @@ void ADCharacter::ProcessWeaponPickup(ADWeapon* Weapon)
 					}
 					else if (!Inventory[1])
 					{
-						UE_LOG(LogTemp, Warning, TEXT("Secondary"))
+						
 							Inventory[1] = Weapon;
 						GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "Second : " + Weapon->WeaponConfig.Name + "with " + CurrentWeapon->WeaponConfig.Name);
 
@@ -234,7 +234,7 @@ void ADCharacter::ProcessWeaponPickup(ADWeapon* Weapon)
 					}
 					else if (!Inventory[0])
 					{
-						UE_LOG(LogTemp, Warning, TEXT("Primary"))
+						
 							GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "Primary : " + Weapon->WeaponConfig.Name + "with " + CurrentWeapon->WeaponConfig.Name);
 
 							Inventory[0] = Weapon;
@@ -245,10 +245,10 @@ void ADCharacter::ProcessWeaponPickup(ADWeapon* Weapon)
 				}
 				else
 				{
-					UE_LOG(LogTemp, Warning, TEXT("Swap"))
+				
 						if (bCurrentWeaponEquiped)
 						{
-							UE_LOG(LogTemp, Warning, TEXT("CurrentSwap"))
+							
 								GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "Swap : " + Weapon->WeaponConfig.Name + "with " + CurrentWeapon->WeaponConfig.Name);
 
 								//Inventory[0]->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
@@ -270,7 +270,7 @@ void ADCharacter::ProcessWeaponPickup(ADWeapon* Weapon)
 						}
 						else
 						{
-							UE_LOG(LogTemp, Warning, TEXT("SecSwap"))
+							
 								GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "Second swap : " + Weapon->WeaponConfig.Name + "with " + Inventory[1]->WeaponConfig.Name);
 
 								Inventory[1]->OnUnEquip();
@@ -286,8 +286,7 @@ void ADCharacter::ProcessWeaponPickup(ADWeapon* Weapon)
 			
 			
 		}
-		else
-		UE_LOG(LogTemp, Warning, TEXT("WEapon Dont have priority"))
+		
 		
 	}
 }
@@ -439,7 +438,7 @@ void ADCharacter::BeginSprint()
 void ADCharacter::EndSprint()
 {
 	float speed=GetCharacterMovement()->MaxWalkSpeed /= SprintValue;
-	UE_LOG(LogTemp, Warning, TEXT("Speed= %f"), speed);
+	
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Speed: %f"), speed));
 }
 
@@ -470,7 +469,9 @@ void ADCharacter::OnHealthChanged(UUDHealthComponent* OwningHealthComp, float He
 	{
 		// Die!
 		bDied = true;
-		UE_LOG(LogTemp, Log, TEXT("Died:%d"),bDied );
+		CurrentWeapon->OnUnEquip();
+		CurrentWeapon->SetOwner(NULL);
+		//CurrentWeapon = nullptr;
 		GetMovementComponent()->StopMovementImmediately();
 		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
