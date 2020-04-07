@@ -16,7 +16,7 @@ ADGameMode::ADGameMode()
 
 	PlayerStateClass = ASPlayerState::StaticClass();
 	GameStateClass = ASGameState::StaticClass();
-
+	//TimeBetweenWaves = 20.f;
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.TickInterval = 1.0f;
 }
@@ -25,6 +25,7 @@ void ADGameMode::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	CheckWaveState();
+	CheckAnyPlayerAlive();
 }
 void ADGameMode::SpawnBotTimerElapsed()
 {

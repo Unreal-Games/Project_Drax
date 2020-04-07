@@ -18,7 +18,7 @@ UUDHealthComponent::UUDHealthComponent()
 	DefaultHealth = 100;
 	bIsDead = false;
 
-	//TeamNum = 255;
+	TeamNum = 255;
 
 	SetIsReplicated(true);
 	
