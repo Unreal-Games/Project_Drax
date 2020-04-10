@@ -22,8 +22,9 @@ protected:
 	FTimerHandle TimerHandle_BotSpawner;
 	FTimerHandle TimerHandle_NextWaveStart;
 
-
+	UPROPERTY(EditDefaultsOnly, Category = "GameMode")
 	int32 NoOfBotToSpawn;
+	UPROPERTY(EditDefaultsOnly, Category = "GameMode")
 	int32 WaveCount;
 	UPROPERTY(EditDefaultsOnly,Category="GameMode")
 	float TimeBetweenWaves;

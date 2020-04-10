@@ -48,6 +48,37 @@ ADCharacter::ADCharacter()
 	bSecondarySocketEquiped = false;
 }
 
+// Called when the game starts or when spawned
+void ADCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+	HealthComp->OnHealthChanged.AddDynamic(this, &ADCharacter::OnHealthChanged);
+	if (Role = ROLE_Authority)
+	{
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		//FVector Loc = GetMesh()->GetSocketLocation("GunSocket");
+		//FRotator Rot = GetControlRotation();
+		//UE_LOG(LogTemp,Warning,TEXT("Location:%s\nRotation%s"),*(Loc.ToString()),*(Rot.ToString()))
+		CurrentWeapon = GetWorld()->SpawnActor<ADWeapon>(StarterWeaponClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+		if (CurrentWeapon)
+		{
+			CurrentWeapon->SetOwner(this);
+			CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachSocketName);
+			//UE_LOG(LogTemp, Warning, TEXT("Socket:%s"), *(WeaponAttachSocketName.ToString()))
+			CurrentWeaponIndex = 0;
+			bCurrentWeaponEquiped = true;
+			//	bPrimarySocketEquiped = true;
+			Inventory[0] = CurrentWeapon;
+		}
+	}
+
+
+	bProning = false;
+	bProne = false;
+	SprintValue = 2;
+
+}
 void ADCharacter::AddControllerPitchInput(float Val)
 {
 	Super::AddControllerPitchInput(Val);
@@ -67,37 +98,7 @@ void ADCharacter::AddControllerYawInput(float Val)
 	}
 }
 
-// Called when the game starts or when spawned
-void ADCharacter::BeginPlay()
-{
-	Super::BeginPlay();
-	HealthComp->OnHealthChanged.AddDynamic(this, &ADCharacter::OnHealthChanged);
-	if(Role=ROLE_Authority)
-	{
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		//FVector Loc = GetMesh()->GetSocketLocation("GunSocket");
-		//FRotator Rot = GetControlRotation();
-		//UE_LOG(LogTemp,Warning,TEXT("Location:%s\nRotation%s"),*(Loc.ToString()),*(Rot.ToString()))
-		CurrentWeapon = GetWorld()->SpawnActor<ADWeapon>(StarterWeaponClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
-		if (CurrentWeapon)
-		{
-			CurrentWeapon->SetOwner(this);
-			CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachSocketName);
-			//UE_LOG(LogTemp, Warning, TEXT("Socket:%s"), *(WeaponAttachSocketName.ToString()))
-			CurrentWeaponIndex = 0;
-			bCurrentWeaponEquiped = true;
-			//	bPrimarySocketEquiped = true;
-			Inventory[0] = CurrentWeapon;
-		}
-	}
-	
-	
-	bProning=false;
-	bProne=false;
-SprintValue=2;
-	
-}
+
 
 void ADCharacter::MoveForward(float Value)
 {
@@ -126,6 +127,7 @@ void ADCharacter::ShowInventory()
 
 void ADCharacter::BeginFire()
 {
+	UE_LOG(LogTemp,Warning,TEXT("%s"),*CurrentWeapon->WeaponConfig.Name);
 	if (CurrentWeapon)
 	{
 		bFire = true;
@@ -282,12 +284,7 @@ void ADCharacter::ProcessWeaponPickup(ADWeapon* Weapon)
 						}
 				}
 			}
-			
-			
-			
-		}
-		
-		
+		}	
 	}
 }
 

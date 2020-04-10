@@ -83,7 +83,7 @@ void ABullet::OnProjectileHit(UPrimitiveComponent* HitComp, AActor* OtherActor, 
 						ActualDamage /= 3;
 					}
 					//if(GetOwner()->GetInstigatorController())
-					UGameplayStatics::ApplyPointDamage(HitActor, ActualDamage, ShotDirection, Hit, Inst, this, DamageType);
+					UGameplayStatics::ApplyPointDamage(HitActor, ActualDamage, ShotDirection, Hit, Inst, MyOwner, DamageType);
 
 					PlayImpactEffects(SurfaceType, Hit.ImpactPoint);
 

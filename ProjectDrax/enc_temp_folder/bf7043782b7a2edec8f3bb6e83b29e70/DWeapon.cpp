@@ -307,7 +307,7 @@ bool ADWeapon::ServerFire_Validate()
 	
 void ADWeapon::StartFire()
 {
-	if(MyPawn)
+	if(GetOwner())
 	{
 		UE_LOG(LogTemp,Warning,TEXT("Hello"))
 		float FirstDelay = FMath::Max(LastFireTime + WeaponConfig.TimeBetweenShots - GetWorld()->TimeSeconds, 0.0f);

@@ -56,7 +56,7 @@ void UUDHealthComponent::HandleTakeAnyDamage(AActor* DamagedActor, float Damage,
 	if (Damage <= 0.0f || bIsDead)
 		return;
 	UE_LOG(LogTemp, Log, TEXT("H"))
-	if (DamageCauser == DamagedActor && IsFriendly(DamagedActor, DamageCauser))
+	if (DamageCauser == DamagedActor)// && IsFriendly(DamagedActor, DamageCauser))
 	{
 		UE_LOG(LogTemp, Log, TEXT("Health "))
 		return;
@@ -98,8 +98,10 @@ bool UUDHealthComponent::IsFriendly(AActor* ActorA, AActor* ActorB)
 {
 	if (ActorA == nullptr || ActorB == nullptr)
 	{
+		UE_LOG(LogTemp, Log, TEXT("Friendly"))
 		// Assume Friendly
 		return true;
+		
 	}
 
 	UUDHealthComponent* HealthCompA = Cast<UUDHealthComponent>(ActorA->GetComponentByClass(UUDHealthComponent::StaticClass()));
@@ -108,7 +110,9 @@ bool UUDHealthComponent::IsFriendly(AActor* ActorA, AActor* ActorB)
 	if (HealthCompA == nullptr || HealthCompB == nullptr)
 	{
 		// Assume friendly
+		UE_LOG(LogTemp, Log, TEXT("Friendly"))
 		return true;
+		
 	}
 	UE_LOG(LogTemp, Warning, TEXT("Team No.A:%d \nTeam no. B:%d"), HealthCompA->TeamNum, HealthCompB->TeamNum);
 	return HealthCompA->TeamNum == HealthCompB->TeamNum;

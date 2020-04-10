@@ -79,12 +79,16 @@ void ADGameMode::CheckWaveState()
 		{
 			continue;
 		}
-		UUDHealthComponent* HealthComp = Cast<UUDHealthComponent>(TestPawn->GetComponentByClass(UUDHealthComponent::StaticClass()));
-		if(HealthComp&&HealthComp->GetHealth()>0.0f)
+		if(!TestPawn->IsPlayerControlled())
 		{
-			bIsAnyBotAlive = true;
-			break;
+			UUDHealthComponent* HealthComp = Cast<UUDHealthComponent>(TestPawn->GetComponentByClass(UUDHealthComponent::StaticClass()));
+			if (HealthComp && HealthComp->GetHealth() > 0.0f)
+			{
+				bIsAnyBotAlive = true;
+				break;
+			}
 		}
+		
 	}
 	if(!bIsAnyBotAlive)
 	{
