@@ -42,8 +42,8 @@ protected:
 	void ShowInventory();
 	
 	int32 CurrentWeaponIndex;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Collision)
-		UBoxComponent* CollisionComp;
+	/*UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Collision)
+		UBoxComponent* CollisionComp;*/
 
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")

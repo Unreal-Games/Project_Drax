@@ -23,8 +23,8 @@ ADCharacter::ADCharacter()
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	CollisionComp = CreateDefaultSubobject<UBoxComponent>(TEXT( "CollisionComp"));
-	CollisionComp->SetupAttachment(RootComponent);
+	/*CollisionComp = CreateDefaultSubobject<UBoxComponent>(TEXT( "CollisionComp"));
+	CollisionComp->SetupAttachment(RootComponent);*/
 	
 	SpringArmComp = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArmComp"));
 	SpringArmComp->bUsePawnControlRotation = true;
@@ -42,7 +42,6 @@ ADCharacter::ADCharacter()
 
 	Inventory.Init(nullptr, 3);
 	PrimaryWeaponSocket = "Weapon1";
-	
 	SecondaryWeaponSocket = "Weapon2";
 	bPrimarySocketEquiped = false;
 	bSecondarySocketEquiped = false;
@@ -57,18 +56,14 @@ void ADCharacter::BeginPlay()
 	{
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		//FVector Loc = GetMesh()->GetSocketLocation("GunSocket");
-		//FRotator Rot = GetControlRotation();
-		//UE_LOG(LogTemp,Warning,TEXT("Location:%s\nRotation%s"),*(Loc.ToString()),*(Rot.ToString()))
 		CurrentWeapon = GetWorld()->SpawnActor<ADWeapon>(StarterWeaponClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
 		if (CurrentWeapon)
 		{
-			CurrentWeapon->SetOwner(this);
+			CurrentWeapon->SetOwningPawn(this);
 			CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachSocketName);
-			//UE_LOG(LogTemp, Warning, TEXT("Socket:%s"), *(WeaponAttachSocketName.ToString()))
 			CurrentWeaponIndex = 0;
 			bCurrentWeaponEquiped = true;
-			//	bPrimarySocketEquiped = true;
+			
 			Inventory[0] = CurrentWeapon;
 		}
 	}
@@ -127,7 +122,7 @@ void ADCharacter::ShowInventory()
 
 void ADCharacter::BeginFire()
 {
-	UE_LOG(LogTemp,Warning,TEXT("%s"),*CurrentWeapon->WeaponConfig.Name);
+	//UE_LOG(LogTemp,Warning,TEXT("%s"),*CurrentWeapon->WeaponConfig.Name);
 	if (CurrentWeapon)
 	{
 		bFire = true;

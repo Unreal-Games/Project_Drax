@@ -74,6 +74,9 @@ struct FWeaponData
 		UParticleSystem* FleshImpactEffect;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Config)
+		UParticleSystem* TracerEffect;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Config)
 		FName MuzzleSocketName;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Config)
@@ -127,6 +130,9 @@ public:
 	void ToggleADS();
 	UPROPERTY(BlueprintReadWrite, Category = "Fire")
 		bool bReload;
+
+	FVector End;
+
 	FTimerHandle TimerHandle_ReloadTime;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Config)
@@ -153,6 +159,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Config)
 		int32 CurrentClip;
 	void PlayFireEffects(FVector TraceEnd);
+
+	void PlayImpactEffects(EPhysicalSurface SurfaceType, FVector ImpactPoint);
 
 	FHitResult WeaponTrace(const FVector& TraceFrom, const FVector& TraceTo) const;
 

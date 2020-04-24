@@ -118,10 +118,10 @@ bool UUDHealthComponent::IsFriendly(AActor* ActorA, AActor* ActorB)
 	return HealthCompA->TeamNum == HealthCompB->TeamNum;
 }
 
-//
-//void UUDHealthComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-//{
-//	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-//
-//	DOREPLIFETIME(UUDHealthComponent, Health);
-//}
+
+void UUDHealthComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UUDHealthComponent, Health);
+}

@@ -101,51 +101,27 @@ void ADWeapon::OnUnEquip()
 	CollisionComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 }
 
-UAudioComponent* ADWeapon::PlayWeaponSound(USoundCue* Sound)
+
+void ADWeapon::ProjectileFire()
 {
-	UAudioComponent* AC = NULL;
-	if (Sound && MyPawn)
-	{
-		//AC = UGameplayStatics::PlaySoundAttached(Sound, MyPawn->GetRootComponent());
-	}
-
-	return AC;
-}
-
-void ADWeapon::PlayFireEffects(FVector TraceEnd)
-{
-	if (WeaponConfig.MuzzleEffect)
-	{
-		UGameplayStatics::SpawnEmitterAttached(WeaponConfig.MuzzleEffect, MeshComp, WeaponConfig.MuzzleSocketName);
-	}
-
-
-
-	APawn* MyOwner = Cast<APawn>(GetOwner());
+	AActor* MyOwner = GetOwner();
 	if (MyOwner)
 	{
-		APlayerController* PC = Cast<APlayerController>(MyOwner->GetController());
-		if (PC)
-		{
-			PC->ClientPlayCameraShake(WeaponConfig.FireCamShake);
-		}
+
+		FVector MuzzleLocation = MeshComp->GetSocketLocation(WeaponConfig.MuzzleSocketName); //+FVector(100.f);
+		FRotator MuzzleRotation = MeshComp->GetSocketRotation(WeaponConfig.MuzzleSocketName);
+		GetOwner()->GetActorEyesViewPoint(MuzzleLocation, MuzzleRotation);
+		//GetOwner()->GetActorEyesViewPoint(MuzzleLocation, MuzzleRotation);
+		MuzzleRotation.Pitch -= 90;
+		UGameplayStatics::SpawnEmitterAttached(WeaponConfig.MuzzleEffect, MeshComp, NAME_None, MuzzleLocation, MuzzleRotation);
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		auto Bullet = GetWorld()->SpawnActor<ABullet>(Projectile, MuzzleLocation, MuzzleRotation, SpawnParams);
+		Bullet->Inst = MyOwner->GetInstigatorController();
+		Bullet->MyOwner = MyOwner;
+
 	}
-}
 
-FHitResult ADWeapon::WeaponTrace(const FVector& TraceFrom, const FVector& TraceTo) const
-{
-	static FName WeaponFireTag = FName(TEXT("WeaponTrace"));
-
-	FCollisionQueryParams TraceParams(WeaponFireTag, true, Instigator);
-	//TraceParams.bTraceAsyncScene = true;
-	TraceParams.bReturnPhysicalMaterial = true;
-	TraceParams.AddIgnoredActor(this);
-
-	FHitResult Hit(ForceInit);
-
-	GetWorld()->LineTraceSingleByChannel(Hit, TraceFrom, TraceTo, COLLISION_WEAPON, TraceParams);
-
-	return Hit;
 }
 
 void ADWeapon::ProcessInstantHit(const FHitResult& Impact, const FVector& Origin, const FVector& ShootDir,
@@ -153,7 +129,7 @@ void ADWeapon::ProcessInstantHit(const FHitResult& Impact, const FVector& Origin
 {
 	const FVector EndTrace = Origin + ShootDir * WeaponConfig.WeaponRange;
 	const FVector EndPoint = Impact.GetActor() ? Impact.ImpactPoint : EndTrace;
-	DrawDebugLine(this->GetWorld(), Origin, Impact.TraceEnd, FColor::Black, true, 10000, 10.f);
+	//DrawDebugLine(this->GetWorld(), Origin, Impact.TraceEnd, FColor::Black, true, 10000, 10.f);
 
 	ADCharacter* Enemy = Cast<ADCharacter>(Impact.GetActor());
 	if (Enemy)
@@ -190,40 +166,119 @@ void ADWeapon::Instant_Fire()
 	FRandomStream WeaponRandomStream(RandomSeed);
 	const float CurrentSpread = WeaponConfig.WeaponSpread;
 	const float SpreadCone = FMath::DegreesToRadians(WeaponConfig.WeaponSpread * 0.5);
-	const FVector AimDir = MeshComp->GetSocketRotation("Muzzle").Vector();
-	const FVector StartTrace = MeshComp->GetSocketLocation("Muzzle");
+	FRotator AimDirc;
+	FVector StartTrace;
+	GetOwner()->GetActorEyesViewPoint(StartTrace,AimDirc);
+	//AimDirc.Pitch -= 90;
+	FVector AimDir = AimDirc.Vector();
 	const FVector ShootDir = WeaponRandomStream.VRandCone(AimDir, SpreadCone, SpreadCone);
 	const FVector EndTrace = StartTrace + ShootDir * WeaponConfig.WeaponRange;
-	const FHitResult Impact = WeaponTrace(StartTrace, EndTrace);
 
-	ProcessInstantHit(Impact, StartTrace, ShootDir, RandomSeed, CurrentSpread);
-	PlayFireEffects(EndTrace);
-	if(Role==ROLE_Authority)
-	{
-		HitScanTrace.TraceTo = EndTrace;
-	}
-}
+	FVector TraceTo = EndTrace;
 
-void ADWeapon::ProjectileFire()
-{
-	AActor* MyOwner = GetOwner();
-	if(MyOwner)
+	//UE_LOG(LogTemp, Warning, TEXT("Aim Dir : % s\nStart Tarce : % s\nShoot dir : % s\nEndTarce : % s"), *AimDir.ToString(),*StartTrace.ToString(),*ShootDir.ToString(),*EndTrace.ToString())
+	
+	static FName WeaponFireTag = FName(TEXT("WeaponTrace"));
+
+	FCollisionQueryParams TraceParams(WeaponFireTag, true, Instigator);
+	//TraceParams.bTraceAsyncScene = true;
+	TraceParams.bReturnPhysicalMaterial = true;
+	TraceParams.AddIgnoredActor(this);
+
+	FHitResult Hit(ForceInit);
+	FHitResult Impact;
+	if (GetWorld()->LineTraceSingleByChannel(Hit, StartTrace, EndTrace, COLLISION_WEAPON, TraceParams))
 	{
-		
-		FVector MuzzleLocation = MeshComp->GetSocketLocation(WeaponConfig.MuzzleSocketName); //+FVector(100.f);
-		FRotator MuzzleRotation = MeshComp->GetSocketRotation(WeaponConfig.MuzzleSocketName);
-		GetOwner()->GetActorEyesViewPoint(MuzzleLocation, MuzzleRotation);
-		//GetOwner()->GetActorEyesViewPoint(MuzzleLocation, MuzzleRotation);
-		MuzzleRotation.Pitch -= 90;
-		UGameplayStatics::SpawnEmitterAttached(WeaponConfig.MuzzleEffect, MeshComp, NAME_None, MuzzleLocation, MuzzleRotation);
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		auto Bullet = GetWorld()->SpawnActor<ABullet>(Projectile, MuzzleLocation, MuzzleRotation, SpawnParams);
-		Bullet->Inst = MyOwner->GetInstigatorController();
-		Bullet->MyOwner = MyOwner;
+		Impact = Hit;
+		TraceTo = Impact.ImpactPoint;
+		ProcessInstantHit(Impact, StartTrace, ShootDir, RandomSeed, CurrentSpread);
 
 	}
 	
+	HitScanTrace.TraceTo = TraceTo;
+	UE_LOG(LogTemp, Warning, TEXT("Trace:%s"), *TraceTo.ToString())
+	HitScanTrace.SurfaceType = UPhysicalMaterial::DetermineSurfaceType(Impact.PhysMaterial.Get());
+	PlayWeaponSound(FireSound);
+	PlayFireEffects(EndTrace);
+	PlayImpactEffects(HitScanTrace.SurfaceType,TraceTo);
+	/*if(Role==ROLE_Authority)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("OnREp"))
+		HitScanTrace.TraceTo = TraceTo;
+		HitScanTrace.SurfaceType= UPhysicalMaterial::DetermineSurfaceType(Impact.PhysMaterial.Get());
+	}*/
+}
+
+
+UAudioComponent* ADWeapon::PlayWeaponSound(USoundCue* Sound)
+{
+	UE_LOG(LogTemp, Warning, TEXT("SoundEffects"))
+	UAudioComponent* AC = NULL;
+	if (Sound && MyPawn)
+	{
+		AC = UGameplayStatics::SpawnSoundAttached(Sound, MyPawn->GetRootComponent());
+		UE_LOG(LogTemp, Warning, TEXT("Sound Playing"))
+	}
+
+	return AC;
+}
+
+void ADWeapon::PlayFireEffects(FVector TraceEnd)
+{
+	UE_LOG(LogTemp,Warning,TEXT("FireEffects"))
+	if (WeaponConfig.MuzzleEffect)
+	{
+		UGameplayStatics::SpawnEmitterAttached(WeaponConfig.MuzzleEffect, MeshComp, WeaponConfig.MuzzleSocketName);
+	}
+
+	if (WeaponConfig.TracerEffect)
+	{
+		FVector MuzzleLocation = MeshComp->GetSocketLocation(WeaponConfig.MuzzleSocketName);
+
+		UParticleSystemComponent* TracerComp = UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), WeaponConfig.TracerEffect, MuzzleLocation);
+		if (TracerComp)
+		{
+			TracerComp->SetVectorParameter(WeaponConfig.TracerTargetName, HitScanTrace.TraceTo);
+			UE_LOG(LogTemp, Warning, TEXT("Tracing Effects:%s"),*HitScanTrace.TraceTo.ToString())
+		}
+	}
+
+	APawn* MyOwner = Cast<APawn>(GetOwner());
+	if (MyOwner)
+	{
+		APlayerController* PC = Cast<APlayerController>(MyOwner->GetController());
+		if (PC)
+		{
+			PC->ClientPlayCameraShake(WeaponConfig.FireCamShake);
+		}
+	}
+}
+
+void ADWeapon::PlayImpactEffects(EPhysicalSurface SurfaceType, FVector ImpactPoint)
+{
+	UE_LOG(LogTemp, Warning, TEXT("ImpactEffects"))
+		UParticleSystem* SelectedEffect = nullptr;
+	switch (SurfaceType)
+	{
+	case SURFACE_FLESHDEFAULT:
+	case SURFACE_FLESHVULNERABLE:
+	case SURFACE_FLESHLIMBS:
+		SelectedEffect = WeaponConfig.FleshImpactEffect;
+		break;
+	default:
+		SelectedEffect = WeaponConfig.DefaultImpactEffect;
+		break;
+	}
+
+	if (SelectedEffect)
+	{
+		FVector MuzzleLocation = MeshComp->GetSocketLocation(WeaponConfig.MuzzleSocketName);
+
+		FVector ShotDirection = ImpactPoint - MuzzleLocation;
+		ShotDirection.Normalize();
+
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), SelectedEffect, ImpactPoint, ShotDirection.Rotation());
+	}
 }
 
 void ADWeapon::SetOwningPawn(ADCharacter* NewOwner)
@@ -232,6 +287,7 @@ void ADWeapon::SetOwningPawn(ADCharacter* NewOwner)
 	{
 		Instigator = NewOwner;
 		MyPawn = NewOwner;
+		SetOwner(NewOwner);
 	}
 }
 
@@ -288,13 +344,16 @@ void ADWeapon::Fire()
 		}
 	}LastFireTime = GetWorld()->TimeSeconds;
 }
+
 void ADWeapon::OnRep_HitScanTrace()
 {
 	// Play cosmetic FX
 	PlayFireEffects(HitScanTrace.TraceTo);
+	PlayImpactEffects(HitScanTrace.SurfaceType, HitScanTrace.TraceTo);
 	
 	
 }
+
 void ADWeapon::ServerFire_Implementation()
 {
 	Fire();
@@ -307,15 +366,13 @@ bool ADWeapon::ServerFire_Validate()
 	
 void ADWeapon::StartFire()
 {
-	if(MyPawn)
+	if(GetOwner())
 	{
-		UE_LOG(LogTemp,Warning,TEXT("Hello"))
+		
 		float FirstDelay = FMath::Max(LastFireTime + WeaponConfig.TimeBetweenShots - GetWorld()->TimeSeconds, 0.0f);
 		GetWorldTimerManager().SetTimer(TimerHandle_TimeBetweenShots, this, &ADWeapon::Fire, WeaponConfig.TimeBetweenShots, true, FirstDelay);
 
 	}
-	UE_LOG(LogTemp, Warning, TEXT("no owner"))
-	
 }
 
 void ADWeapon::StopFire()
