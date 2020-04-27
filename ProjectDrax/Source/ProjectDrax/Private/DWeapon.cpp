@@ -194,6 +194,20 @@ void ADWeapon::Instant_Fire()
 		ProcessInstantHit(Impact, StartTrace, ShootDir, RandomSeed, CurrentSpread);
 
 	}
+	if (WeaponConfig.TracerEffect)
+	{
+		FVector MuzzleLocation = MeshComp->GetSocketLocation(WeaponConfig.MuzzleSocketName);
+
+		UParticleSystemComponent* TracerComp = UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), WeaponConfig.TracerEffect, MuzzleLocation);
+		if (TracerComp)
+		{
+			const FVector EndPoint = Impact.GetActor() ? Impact.ImpactPoint : EndTrace;
+			TracerComp->SetVectorParameter(WeaponConfig.TracerTargetName, EndPoint);
+			//UE_LOG(LogTemp, Warning, TEXT("Tracing Effects:%s"), *HitScanTrace.TraceTo.ToString())
+			DrawDebugLine(this->GetWorld(), MuzzleLocation, EndPoint, FColor::Black, true, 10000, 10.f);
+		}
+
+	}
 	
 	HitScanTrace.TraceTo = TraceTo;
 	UE_LOG(LogTemp, Warning, TEXT("Trace:%s"), *TraceTo.ToString())
@@ -231,7 +245,7 @@ void ADWeapon::PlayFireEffects(FVector TraceEnd)
 		UGameplayStatics::SpawnEmitterAttached(WeaponConfig.MuzzleEffect, MeshComp, WeaponConfig.MuzzleSocketName);
 	}
 
-	if (WeaponConfig.TracerEffect)
+	/*if (WeaponConfig.TracerEffect)
 	{
 		FVector MuzzleLocation = MeshComp->GetSocketLocation(WeaponConfig.MuzzleSocketName);
 
@@ -241,7 +255,7 @@ void ADWeapon::PlayFireEffects(FVector TraceEnd)
 			TracerComp->SetVectorParameter(WeaponConfig.TracerTargetName, HitScanTrace.TraceTo);
 			UE_LOG(LogTemp, Warning, TEXT("Tracing Effects:%s"),*HitScanTrace.TraceTo.ToString())
 		}
-	}
+	}*/
 
 	APawn* MyOwner = Cast<APawn>(GetOwner());
 	if (MyOwner)

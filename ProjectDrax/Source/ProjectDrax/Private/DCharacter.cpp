@@ -8,6 +8,8 @@
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "DWeapon.h"
+#include "DPickUp.h"
+#include "DInventory.h"
 #include "Components/BoxComponent.h"
 #include "ProjectDrax.h"
 #include "Components/UDHealthComponent.h"
@@ -40,7 +42,7 @@ ADCharacter::ADCharacter()
 
 	WeaponAttachSocketName = "GunSocket";
 
-	Inventory.Init(nullptr, 3);
+	WeaponInventory.Init(nullptr, 3);
 	PrimaryWeaponSocket = "Weapon1";
 	SecondaryWeaponSocket = "Weapon2";
 	bPrimarySocketEquiped = false;
@@ -64,7 +66,7 @@ void ADCharacter::BeginPlay()
 			CurrentWeaponIndex = 0;
 			bCurrentWeaponEquiped = true;
 			
-			Inventory[0] = CurrentWeapon;
+			WeaponInventory[0] = CurrentWeapon;
 		}
 	}
 
@@ -114,10 +116,10 @@ void ADCharacter::BeginCrouch()
 
 void ADCharacter::ShowInventory()
 {
-	for (int i = 0; i < 3; i++)
+	/*for (int i = 0; i < 3; i++)
 		if(Inventory[i])
 		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, i + "  .   " + Inventory[i]->WeaponConfig.Name);
-	
+	*/
 }
 
 void ADCharacter::BeginFire()
@@ -200,41 +202,42 @@ void ADCharacter::ProcessWeaponPickup(ADWeapon* Weapon)
 						
 							//Inventory[0] = Spawner;
 						Weapon->SetOwningPawn(this);
-						if (!Inventory[0])
+						if (!WeaponInventory[0])
 						{
 							GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "Primary Pickup : " + Weapon->WeaponConfig.Name + "with " + CurrentWeapon->WeaponConfig.Name);
 
 							Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachSocketName);
 							
-							Inventory[0] = Weapon;
+							WeaponInventory[0] = Weapon;
+							
 						}
-						else if (!Inventory[1])
+						else if (!WeaponInventory[1])
 						{
-							GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "Second Pickup : " + Weapon->WeaponConfig.Name + "with " + CurrentWeapon->WeaponConfig.Name);
+							//GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "Second Pickup : " + Weapon->WeaponConfig.Name + "with " + CurrentWeapon->WeaponConfig.Name);
 
 							Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachSocketName);
 							
-							Inventory[1] = Weapon;
+							WeaponInventory[1] = Weapon;
 						}
 						CurrentWeapon = Weapon;
 						bCurrentWeaponEquiped = true;
 					}
-					else if (!Inventory[1])
+					else if (!WeaponInventory[1])
 					{
 						
-							Inventory[1] = Weapon;
+						WeaponInventory[1] = Weapon;
 						GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "Second : " + Weapon->WeaponConfig.Name + "with " + CurrentWeapon->WeaponConfig.Name);
 
 						Weapon->SetOwningPawn(this);
 						Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SecondaryWeaponSocket);
 						bSecondarySocketEquiped = true;
 					}
-					else if (!Inventory[0])
+					else if (!WeaponInventory[0])
 					{
 						
 							GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "Primary : " + Weapon->WeaponConfig.Name + "with " + CurrentWeapon->WeaponConfig.Name);
 
-							Inventory[0] = Weapon;
+							WeaponInventory[0] = Weapon;
 						Weapon->SetOwningPawn(this);
 						Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, PrimaryWeaponSocket);
 						bPrimarySocketEquiped = true;
@@ -248,11 +251,11 @@ void ADCharacter::ProcessWeaponPickup(ADWeapon* Weapon)
 							
 								GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "Swap : " + Weapon->WeaponConfig.Name + "with " + CurrentWeapon->WeaponConfig.Name);
 
-								//Inventory[0]->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+								//WeaponInventory[0]->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 								int Swap;
 								for(int i=0;i<2;i++)
 								{
-									if(Inventory[i]->WeaponConfig.Name==CurrentWeapon->WeaponConfig.Name)
+									if(WeaponInventory[i]->WeaponConfig.Name==CurrentWeapon->WeaponConfig.Name)
 									{
 										Swap = i;
 									}
@@ -263,19 +266,19 @@ void ADCharacter::ProcessWeaponPickup(ADWeapon* Weapon)
 							Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachSocketName);
 							CurrentWeapon = Weapon;
 						
-							Inventory[Swap] = Weapon;
+							WeaponInventory[Swap] = Weapon;
 						}
 						else
 						{
 							
-								GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "Second swap : " + Weapon->WeaponConfig.Name + "with " + Inventory[1]->WeaponConfig.Name);
+								GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "Second swap : " + Weapon->WeaponConfig.Name + "with " + WeaponInventory[1]->WeaponConfig.Name);
 
-								Inventory[1]->OnUnEquip();
-							Inventory[1]->SetOwner(NULL);
+								WeaponInventory[1]->OnUnEquip();
+								WeaponInventory[1]->SetOwner(NULL);
 							Weapon->SetOwningPawn(this);
 							Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SecondaryWeaponSocket);
 
-							Inventory[1] = Weapon;
+							WeaponInventory[1] = Weapon;
 						}
 				}
 			}
@@ -299,7 +302,7 @@ void ADCharacter::NextWeapon()
 	else
 		bSecondarySocketEquiped = false;
 	
-	EquipWeapon(Inventory[CurrentWeaponIndex]);
+	EquipWeapon(WeaponInventory[CurrentWeaponIndex]);
 }
 
 void ADCharacter::PrevWeapon()
@@ -317,7 +320,7 @@ void ADCharacter::PrevWeapon()
 	else
 		bSecondarySocketEquiped = false;
 	
-	EquipWeapon(Inventory[CurrentWeaponIndex]);
+	EquipWeapon(WeaponInventory[CurrentWeaponIndex]);
 }
 
 void ADCharacter::EquipWeapon(ADWeapon * Weapon)
@@ -328,18 +331,18 @@ void ADCharacter::EquipWeapon(ADWeapon * Weapon)
 		{
 			//CurrentWeapon = Inventory[CurrentWeaponIndex];
 			CurrentWeapon->OnUnEquip();
-			if (!bPrimarySocketEquiped)
+			if (!(bPrimarySocketEquiped||WeaponInventory[0]!= CurrentWeapon))
 			{
 				CurrentWeapon->OnUnEquip();
-				GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "Primary Swaping : " + Inventory[CurrentWeaponIndex]->WeaponConfig.Name+"with "+CurrentWeapon->WeaponConfig.Name);
+				GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "Primary Swaping : " + WeaponInventory[CurrentWeaponIndex]->WeaponConfig.Name+"with "+CurrentWeapon->WeaponConfig.Name);
 
 				CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, PrimaryWeaponSocket);
 				bPrimarySocketEquiped = true;
 			}
-			else
+			else if (!(bSecondarySocketEquiped || WeaponInventory[1] != CurrentWeapon))
 			{
 				CurrentWeapon->OnUnEquip();
-				GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "Secondary Swaping : " + Inventory[CurrentWeaponIndex]->WeaponConfig.Name + "with " + CurrentWeapon->WeaponConfig.Name);
+				GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "Secondary Swaping : " + WeaponInventory[CurrentWeaponIndex]->WeaponConfig.Name + "with " + CurrentWeapon->WeaponConfig.Name);
 
 				CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SecondaryWeaponSocket);
 				bSecondarySocketEquiped = true;
@@ -356,7 +359,7 @@ void ADCharacter::EquipWeapon(ADWeapon * Weapon)
 		{
 			Weapon->OnUnEquip();
 			CurrentWeapon = Weapon;
-			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "Current weapon initialsied : " + Inventory[CurrentWeaponIndex]->WeaponConfig.Name + "with " + CurrentWeapon->WeaponConfig.Name);
+			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "Current weapon initialsied : " + WeaponInventory[CurrentWeaponIndex]->WeaponConfig.Name + "with " + CurrentWeapon->WeaponConfig.Name);
 
 			//CurrentWeapon = Inventory[CurrentWeaponIndex];
 			CurrentWeapon->SetOwningPawn(this);
@@ -373,14 +376,14 @@ void ADCharacter::EquipWeapon(ADWeapon * Weapon)
 		{
 			CurrentWeapon->OnUnEquip();
 			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "Swaping Null with " + CurrentWeapon->WeaponConfig.Name);
-			if (!bPrimarySocketEquiped)
+			if (!(bPrimarySocketEquiped || WeaponInventory[0] != CurrentWeapon))
 			{
 				CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, PrimaryWeaponSocket);
 				CurrentWeapon = Weapon;
 				bPrimarySocketEquiped = true;
 			}
 				//CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachSocketName);
-			else
+			else if (!(bSecondarySocketEquiped || WeaponInventory[1] != CurrentWeapon))
 			{
 				CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SecondaryWeaponSocket);
 				CurrentWeapon = Weapon;
@@ -418,6 +421,11 @@ void ADCharacter::PickUP()
 		if (Weapon)
 		{
 			ProcessWeaponPickup(Weapon);
+		}
+		ADPickUp* PickUp = Cast<ADPickUp>(Hit.GetActor());
+		if (PickUp)
+		{
+			Inventory->AddItem(PickUp);
 		}
 	}
 }

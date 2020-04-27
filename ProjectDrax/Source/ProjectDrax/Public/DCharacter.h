@@ -38,6 +38,8 @@ protected:
 
 	void MoveRight(float Value);
 
+	class ADInventory* Inventory;
+
 	void BeginCrouch();
 	void ShowInventory();
 	
@@ -68,7 +70,7 @@ void StandUp();
 	void ProcessWeaponPickup(ADWeapon* Weapon);
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Inventory)
-		TArray<class ADWeapon*> Inventory;
+		TArray<class ADWeapon*> WeaponInventory;
 
 	void EndZoom();
 
