@@ -3,12 +3,17 @@
 
 #include "DPickUp.h"
 
-// Sets default values
+#include "Components/BoxComponent.h"
+#include "Components/StaticMeshComponent.h"
+
+
 ADPickUp::ADPickUp()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
-
+	///*CollisionComp = CreateDefaultSubobject<UBoxComponent>(TEXT("CollisionComp"));
+	//CollisionComp;*/
+	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComp"));
+	RootComponent = MeshComp;// ->SetupAttachment(RootComponent);
 }
 
 // Called when the game starts or when spawned
@@ -18,10 +23,10 @@ void ADPickUp::BeginPlay()
 	
 }
 
-// Called every frame
-void ADPickUp::Tick(float DeltaTime)
+void ADPickUp::DestroyPickUp()
 {
-	Super::Tick(DeltaTime);
-
+	Destroy();
 }
+
+
 

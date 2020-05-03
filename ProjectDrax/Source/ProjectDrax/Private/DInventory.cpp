@@ -8,7 +8,7 @@ ADInventory::ADInventory()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
+	Items.Init(nullptr, 10);
 }
 
 // Called when the game starts or when spawned
@@ -27,7 +27,8 @@ void ADInventory::Tick(float DeltaTime)
 
 bool ADInventory::AddItem(ADPickUp* Item)
 {
-	Items.Add(Item);
+	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, FString::Printf(TEXT("picking")));
+	//Items.Add(Item);
 	return false;
 }
 

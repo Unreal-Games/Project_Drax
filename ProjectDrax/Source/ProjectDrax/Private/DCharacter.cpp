@@ -9,7 +9,7 @@
 #include "Engine/World.h"
 #include "DWeapon.h"
 #include "DPickUp.h"
-#include "DInventory.h"
+#include "Inventory.h"
 #include "Components/BoxComponent.h"
 #include "ProjectDrax.h"
 #include "Components/UDHealthComponent.h"
@@ -39,6 +39,9 @@ ADCharacter::ADCharacter()
 
 	CameraComp = CreateDefaultSubobject<UCameraComponent>(TEXT("CamerComp"));
 	CameraComp->SetupAttachment(SpringArmComp);
+
+	Inventory = CreateDefaultSubobject<UInventory>(TEXT("InventoryComp"));
+
 
 	WeaponAttachSocketName = "GunSocket";
 
@@ -114,13 +117,7 @@ void ADCharacter::BeginCrouch()
 	Crouch();
 }
 
-void ADCharacter::ShowInventory()
-{
-	/*for (int i = 0; i < 3; i++)
-		if(Inventory[i])
-		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, i + "  .   " + Inventory[i]->WeaponConfig.Name);
-	*/
-}
+
 
 void ADCharacter::BeginFire()
 {
@@ -421,11 +418,18 @@ void ADCharacter::PickUP()
 		if (Weapon)
 		{
 			ProcessWeaponPickup(Weapon);
+			return;
 		}
 		ADPickUp* PickUp = Cast<ADPickUp>(Hit.GetActor());
+		//GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, FString::Printf(TEXT("%s"), *PickUp->GetName()));
 		if (PickUp)
 		{
+			GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, FString::Printf(TEXT("piciking")));
 			Inventory->AddItem(PickUp);
+			PickUp->SetActorEnableCollision(false);
+			PickUp->SetActorHiddenInGame(true);
+			//PickUp->Destroy();
+			//PickUp->DestroyPickUp();
 		}
 	}
 }
@@ -527,7 +531,8 @@ void ADCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &ADCharacter::ReloadWeapon);
 
 	PlayerInputComponent->BindAction("Inventory", IE_Pressed, this, &ADCharacter::ShowInventory);
-	
+	//PlayerInputComponent->BindAction("Inventory", IE_Released, this, &ADCharacter::HideInventory);
+
 	PlayerInputComponent->BindAction("Sprint", IE_Pressed, this, &ADCharacter::BeginSprint);
 	PlayerInputComponent->BindAction("Sprint", IE_Released, this, &ADCharacter::EndSprint);
 

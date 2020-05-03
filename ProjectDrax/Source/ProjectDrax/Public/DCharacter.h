@@ -38,10 +38,14 @@ protected:
 
 	void MoveRight(float Value);
 
-	class ADInventory* Inventory;
+	class UInventory* Inventory;
 
 	void BeginCrouch();
+
+	UFUNCTION(BlueprintImplementableEvent)
 	void ShowInventory();
+	UFUNCTION(BlueprintImplementableEvent)
+		void HideInventory();
 	
 	int32 CurrentWeaponIndex;
 	/*UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Collision)

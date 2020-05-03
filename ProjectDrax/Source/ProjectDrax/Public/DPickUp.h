@@ -23,25 +23,34 @@ struct FPickUpData : public FTableRowBase
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		FString Name;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		FString Desc;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class USkeletalMesh* Mesh;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		int32 Amount;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float Weight;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TEnumAsByte<ECategory::CategoryType> Category;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		int32 Heal;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		int32 Boost;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		int32 BaseDamage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		UTexture2D* SplashArt;
 };
 
@@ -57,11 +66,17 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		FPickUpData PickUP;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		class UStaticMeshComponent* MeshComp;
 
-	UPROPERTY(EditAnywhere,Category="PickUP")
+	/*UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Collision)
+		class UBoxComponent* CollisionComp;*/
+
+	UPROPERTY(EditAnywhere,Category="PickUP",BlueprintReadWrite)
 		class UDataTable* PickUpDataTable;
 public:	
 	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
+	void DestroyPickUp();
 };
