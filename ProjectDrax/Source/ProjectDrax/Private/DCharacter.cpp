@@ -2,20 +2,21 @@
 
 
 #include "DCharacter.h"
-#include "Camera/CameraComponent.h"
-#include "Components/CapsuleComponent.h"
-#include "Components/InputComponent.h"
-#include "Engine/Engine.h"
-#include "Engine/World.h"
 #include "DWeapon.h"
 #include "DPickUp.h"
 #include "Inventory.h"
-#include "Components/BoxComponent.h"
 #include "ProjectDrax.h"
 #include "Components/UDHealthComponent.h"
-#include "DrawDebugHelpers.h"
+
+#include "Camera/CameraComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Components/BoxComponent.h"
+#include "Components/InputComponent.h"
+#include "Engine/Engine.h"
+#include "Engine/World.h"
+#include "DrawDebugHelpers.h"
 #include "TimerManager.h"
 #include "Containers/Array.h"
 #include "UnrealNetwork.h"
@@ -65,6 +66,7 @@ void ADCharacter::BeginPlay()
 		if (CurrentWeapon)
 		{
 			CurrentWeapon->SetOwningPawn(this);
+			CurrentWeapon->SetActorEnableCollision(false);
 			CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachSocketName);
 			CurrentWeaponIndex = 0;
 			bCurrentWeaponEquiped = true;
@@ -185,7 +187,7 @@ void ADCharacter::ProcessWeaponPickup(ADWeapon* Weapon)
 	
 	if (Weapon != NULL)
 	{
-		
+		Weapon-> SetActorEnableCollision(false);
 		if (Weapon->GetOwner()==NULL)
 		{
 			ADWeapon* Spawner = GetWorld()->SpawnActor<ADWeapon>(Weapon->GetClass());
@@ -219,6 +221,16 @@ void ADCharacter::ProcessWeaponPickup(ADWeapon* Weapon)
 						CurrentWeapon = Weapon;
 						bCurrentWeaponEquiped = true;
 					}
+					else if (!WeaponInventory[0])
+					{
+
+						GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "Primary : " + Weapon->WeaponConfig.Name + "with " + CurrentWeapon->WeaponConfig.Name);
+
+						WeaponInventory[0] = Weapon;
+						Weapon->SetOwningPawn(this);
+						Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, PrimaryWeaponSocket);
+						bPrimarySocketEquiped = true;
+					}
 					else if (!WeaponInventory[1])
 					{
 						
@@ -228,16 +240,6 @@ void ADCharacter::ProcessWeaponPickup(ADWeapon* Weapon)
 						Weapon->SetOwningPawn(this);
 						Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SecondaryWeaponSocket);
 						bSecondarySocketEquiped = true;
-					}
-					else if (!WeaponInventory[0])
-					{
-						
-							GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "Primary : " + Weapon->WeaponConfig.Name + "with " + CurrentWeapon->WeaponConfig.Name);
-
-							WeaponInventory[0] = Weapon;
-						Weapon->SetOwningPawn(this);
-						Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, PrimaryWeaponSocket);
-						bPrimarySocketEquiped = true;
 					}
 				}
 				else

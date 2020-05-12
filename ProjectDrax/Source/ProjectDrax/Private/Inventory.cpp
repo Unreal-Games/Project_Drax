@@ -3,14 +3,18 @@
 
 #include "Inventory.h"
 #include "DPickUp.h"
+#include <ProjectDrax\Public\DWeapon.h>
+#include "DCharacter.h"
 
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
 
+
 // Sets default values for this component's properties
 UInventory::UInventory()
 {
-
+	InventoryWeight = 120;
+	CurrentInventoryWeight = 0;
 }
 
 
@@ -58,6 +62,12 @@ void UInventory::FindNearByItems()
 				//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("PickUP Hit Result: %s"), *PickUp->GetName()));
 				NearByItems.Add(PickUp);
 			}
+			ADWeapon* Weapon = Cast<ADWeapon>(Actor);
+			if (Weapon)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("PickUP Hit Result: %s"), *Weapon->GetName()));
+				NearByItems.Add(Weapon);
+			}
 		}
 	}
 	
@@ -65,9 +75,44 @@ void UInventory::FindNearByItems()
 	
 }
 
+ADWeapon* UInventory::Pick(class AActor* Item)
+{
+	ADPickUp* PickUp = Cast<ADPickUp>(Item);
+	
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("Hit Result: %s"), *Actor->GetName()));
+	if (PickUp)
+	{
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("PickUP Hit Result: %s"), *PickUp->GetName()));
+		PickUp->SetActorEnableCollision(false);
+		PickUp->SetActorHiddenInGame(true);
+		NearByItems.Remove(PickUp);
+		AddItem(PickUp);
+	}
+	ADWeapon* Weapon = Cast<ADWeapon>(Item);
+	if (Weapon)
+	{
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("PickUP Hit Result: %s"), *PickUp->GetName()));
+		NearByItems.Remove(Weapon);
+		return Weapon;
+	}
+	return nullptr;
+}
+
 bool UInventory::AddItem(ADPickUp* Item)
 {
-	Items.Add(Item);
+	if (Item->PickUP.Weight + CurrentInventoryWeight < InventoryWeight)
+	{
+		CurrentInventoryWeight += Item->PickUP.Weight;
+		if (Items.Contains(Item))
+		{
+			
+			 auto PrevItemIndex= Items.Find(Item);
+			 Items[PrevItemIndex]->PickUP.Amount += Item->PickUP.Amount;
+		}
+		else
+		Items.Add(Item);
+	}
+	
 	for (ADPickUp* Ite : Items)
 	{
 		UE_LOG(LogTemp,Warning,TEXT("\n%s"),*Ite->GetName())

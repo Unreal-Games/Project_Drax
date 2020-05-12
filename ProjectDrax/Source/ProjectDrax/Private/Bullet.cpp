@@ -2,15 +2,16 @@
 
 
 #include "Bullet.h"
-#include "CollisionQueryParams.h"
-#include "Engine/World.h"
 #include "ProjectDrax.h"
+#include "DCharacter.h"
+
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Particles/ParticleSystemComponent.h"
 #include "Components/BoxComponent.h"
+#include "CollisionQueryParams.h"
+#include "Engine/World.h"
 #include "TimerManager.h"
-#include "DCharacter.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/Engine.h"
@@ -86,7 +87,7 @@ void ABullet::OnProjectileHit(UPrimitiveComponent* HitComp, AActor* OtherActor, 
 					UGameplayStatics::ApplyPointDamage(HitActor, ActualDamage, ShotDirection, Hit, Inst, MyOwner, DamageType);
 
 					PlayImpactEffects(SurfaceType, Hit.ImpactPoint);
-
+					
 					//TracerEndPoint = Hit.ImpactPoint;
 				}
 		
@@ -110,6 +111,7 @@ void ABullet::PlayImpactEffects(EPhysicalSurface SurfaceType, FVector ImpactPoin
 	{
 	case SURFACE_FLESHDEFAULT:
 	case SURFACE_FLESHVULNERABLE:
+	case SURFACE_FLESHLIMBS:
 		SelectedEffect = FleshImpactEffect;
 		break;
 	default:
@@ -127,6 +129,9 @@ void ABullet::PlayImpactEffects(EPhysicalSurface SurfaceType, FVector ImpactPoin
 		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), SelectedEffect, ImpactPoint, ShotDirection.Rotation());
 	}
 }
+
+
+
 
 void ABullet::OnRep_HitScanTrace()
 {

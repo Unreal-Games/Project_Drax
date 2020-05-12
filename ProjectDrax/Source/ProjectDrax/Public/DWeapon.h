@@ -1,12 +1,12 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
+#include "ProjectDrax.h"
 
 #include "Camera/CameraShake.h"
 #include "Components/AudioComponent.h"
 #include "Components/BoxComponent.h"
 #include "CoreMinimal.h"
-#include "ProjectDrax.h"
 #include "GameFramework/Actor.h"
 #include "DWeapon.generated.h"
 
@@ -87,6 +87,9 @@ struct FWeaponData
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Config)
 		int32 Priority;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Config)
+		class USkeletalMeshComponent* MeshComp;
 };
 
 USTRUCT()
@@ -116,90 +119,91 @@ public:
 	// Sets default values for this actor's properties
 	ADWeapon();
 
+	//comp of weapon
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Collision)
 		UBoxComponent* CollisionComp;
-	UPROPERTY(EditAnywhere)
-		TSubclassOf<AActor> Projectile;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		class USkeletalMeshComponent* MeshComp;
+	
 	UPROPERTY(BlueprintReadWrite)
+		bool flag;
+
+
+	//togle ADS
 	bool bIsADS;
-	bool flag;
 	UFUNCTION(BlueprintImplementableEvent)
 		void ShowADSOverlay();
 	UFUNCTION(BlueprintImplementableEvent)
 		void HideADSOverlay();
 	void ToggleADS();
+
+
+	//reload weapon
 	UPROPERTY(BlueprintReadWrite, Category = "Fire")
 		bool bReload;
-
-	FVector End;
-
 	FTimerHandle TimerHandle_ReloadTime;
 
+
+	
+
+
+	//weapon data
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Config)
 		FWeaponData WeaponConfig;
 
+	//choose projectile if present
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = Config)
 		TEnumAsByte<EWeaponProjectile::ProjectileType> ProjectileType;
+	UPROPERTY(EditAnywhere)
+		TSubclassOf<AActor> Projectile;
 
+
+	//Equiping and unequiping weapon
 	void AttachToPlayer();
 	void DetachFromPlayer();
 	void OnEquip();
 	void OnUnEquip();
+
+	//playing firing sound and visual effects
 	UPROPERTY(EditDefaultsOnly, Category = Config)
 		class USoundCue* FireSound;
 	UAudioComponent* PlayWeaponSound(USoundCue* Sound);
+	void PlayFireEffects(FVector TraceEnd);
+	void PlayImpactEffects(EPhysicalSurface SurfaceType, FVector ImpactPoint);
+	FHitResult WeaponTrace(const FVector& TraceFrom, const FVector& TraceTo) const;
+	UPROPERTY(ReplicatedUsing = OnRep_HitScanTrace)
+		FMuzzle HitScanTrace;
+	UFUNCTION()
+		void OnRep_HitScanTrace();
 	
-		
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	class USkeletalMeshComponent* MeshComp;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Config)
 		int32 CurrentAmmo;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Config)
 		int32 CurrentClip;
-	void PlayFireEffects(FVector TraceEnd);
-
-	void PlayImpactEffects(EPhysicalSurface SurfaceType, FVector ImpactPoint);
-
-	FHitResult WeaponTrace(const FVector& TraceFrom, const FVector& TraceTo) const;
-
+	
+	//processing fire
 	void ProcessInstantHit(const FHitResult& Impact, const FVector& Origin, const FVector& ShootDir, int32 RandomSeed, float ReticleSpread);
-
 	UFUNCTION()
 		void Instant_Fire();
-
 	UFUNCTION()
 		virtual void ProjectileFire();
-
 	void SetOwningPawn(ADCharacter* NewOwner);
-	
-
-
-	UPROPERTY(ReplicatedUsing = OnRep_HitScanTrace)
-		FMuzzle HitScanTrace;
-
-	UFUNCTION()
-		void OnRep_HitScanTrace();
-
-	void Fire();
-
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerFire();
-
 	FTimerHandle TimerHandle_TimeBetweenShots;
-	
-
 	float LastFireTime;
+	void Fire();
+
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
 		TSubclassOf<UDamageType> DamageType;
 
 	
-	
 
 public:
-
+	//Fynctions for firing
 	void StartFire();
 
 	void StopFire();
@@ -213,6 +217,8 @@ protected:
 
 	
 	virtual void BeginPlay() override;
+	
+	//Initialising owner
 	ADCharacter* MyPawn;
 
 };

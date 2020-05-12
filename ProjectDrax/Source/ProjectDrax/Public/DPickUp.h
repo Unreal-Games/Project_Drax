@@ -66,8 +66,7 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		FPickUpData PickUP;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		class UStaticMeshComponent* MeshComp;
 
@@ -77,6 +76,10 @@ protected:
 	UPROPERTY(EditAnywhere,Category="PickUP",BlueprintReadWrite)
 		class UDataTable* PickUpDataTable;
 public:	
+
 	// Called every frame
 	void DestroyPickUp();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		FPickUpData PickUP;
 };

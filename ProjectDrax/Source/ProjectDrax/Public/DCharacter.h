@@ -71,6 +71,8 @@ void StandUp();
 
 	
 	void BeginZoom();
+
+	UFUNCTION(BlueprintCallable)
 	void ProcessWeaponPickup(ADWeapon* Weapon);
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Inventory)

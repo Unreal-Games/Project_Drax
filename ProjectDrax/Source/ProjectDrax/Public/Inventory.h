@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
+#include "DWeapon.h"
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
@@ -22,11 +23,17 @@ protected:
 	UPROPERTY(BlueprintReadWrite)
 		TArray<class ADPickUp*> Items;
 	UPROPERTY(BlueprintReadWrite)
-		TArray<class ADPickUp*> NearByItems;
+		TArray<class AActor*> NearByItems;
+	int32 InventoryWeight;
+	int32 CurrentInventoryWeight;
 public:
 	// Called every frame
 	UFUNCTION(BlueprintCallable)
-	void FindNearByItems( );
+	void FindNearByItems();
+	
+	UFUNCTION(BlueprintCallable)
+	ADWeapon* Pick(class AActor* Item);
+
 	bool AddItem(class ADPickUp* Item);
 	UFUNCTION(BlueprintCallable)
 	void DropItem(class ADPickUp* Item);

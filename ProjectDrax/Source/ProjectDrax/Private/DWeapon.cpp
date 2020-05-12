@@ -101,6 +101,61 @@ void ADWeapon::OnUnEquip()
 	CollisionComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 }
 
+void ADWeapon::Fire()
+{
+	if (Role < ROLE_Authority)
+	{
+		ServerFire();
+		return;
+	}
+	//GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, TEXT("Fire called"));
+	if (ProjectileType == EWeaponProjectile::EBullet)
+	{
+		if (CurrentClip > 0)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, TEXT("Bullet"));
+			Instant_Fire();
+			PlayWeaponSound(FireSound);
+			CurrentClip -= WeaponConfig.ShotCost;
+		}
+		else
+		{
+			ReloadWeapon();
+		}
+	}
+	if (ProjectileType == EWeaponProjectile::ESpread)
+	{
+		if (CurrentClip > 0)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, TEXT("Spread"));
+			for (int32 i = 0; i <= WeaponConfig.WeaponSpread; i++)
+			{
+				Instant_Fire();
+				PlayWeaponSound(FireSound);
+			}
+			
+			CurrentClip -= WeaponConfig.ShotCost;
+		}
+		else
+		{
+			ReloadWeapon();
+		}
+	}
+	if (ProjectileType == EWeaponProjectile::EProjectile)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, TEXT("Projection"));
+		if (CurrentClip > 0)
+		{
+			PlayWeaponSound(FireSound);
+			ProjectileFire();
+			CurrentClip -= WeaponConfig.ShotCost;
+		}
+		else
+		{
+			ReloadWeapon();
+		}
+	}LastFireTime = GetWorld()->TimeSeconds;
+}
 
 void ADWeapon::ProjectileFire()
 {
@@ -122,6 +177,70 @@ void ADWeapon::ProjectileFire()
 
 	}
 
+}
+
+
+void ADWeapon::Instant_Fire()
+{
+	const int32 RandomSeed = FMath::Rand();
+	FRandomStream WeaponRandomStream(RandomSeed);
+	const float CurrentSpread = WeaponConfig.WeaponSpread;
+	const float SpreadCone = FMath::DegreesToRadians(WeaponConfig.WeaponSpread * 0.5);
+	FRotator AimDirc;
+	FVector StartTrace;
+	GetOwner()->GetActorEyesViewPoint(StartTrace, AimDirc);
+	//AimDirc.Pitch -= 90;
+	FVector AimDir = AimDirc.Vector();
+	const FVector ShootDir = WeaponRandomStream.VRandCone(AimDir, SpreadCone, SpreadCone);
+	const FVector EndTrace = StartTrace + ShootDir * WeaponConfig.WeaponRange;
+
+	FVector TraceTo = EndTrace;
+
+	//UE_LOG(LogTemp, Warning, TEXT("Aim Dir : % s\nStart Tarce : % s\nShoot dir : % s\nEndTarce : % s"), *AimDir.ToString(),*StartTrace.ToString(),*ShootDir.ToString(),*EndTrace.ToString())
+
+	static FName WeaponFireTag = FName(TEXT("WeaponTrace"));
+
+	FCollisionQueryParams TraceParams(WeaponFireTag, true, Instigator);
+	//TraceParams.bTraceAsyncScene = true;
+	TraceParams.bReturnPhysicalMaterial = true;
+	TraceParams.AddIgnoredActor(this);
+
+	FHitResult Hit(ForceInit);
+	FHitResult Impact;
+	if (GetWorld()->LineTraceSingleByChannel(Hit, StartTrace, EndTrace, COLLISION_WEAPON, TraceParams))
+	{
+		Impact = Hit;
+		TraceTo = Impact.ImpactPoint;
+		ProcessInstantHit(Impact, StartTrace, ShootDir, RandomSeed, CurrentSpread);
+
+	}
+	if (WeaponConfig.TracerEffect)
+	{
+		FVector MuzzleLocation = MeshComp->GetSocketLocation(WeaponConfig.MuzzleSocketName);
+
+		UParticleSystemComponent* TracerComp = UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), WeaponConfig.TracerEffect, MuzzleLocation);
+		if (TracerComp)
+		{
+			const FVector EndPoint = Impact.GetActor() ? Impact.ImpactPoint : EndTrace;
+			TracerComp->SetVectorParameter(WeaponConfig.TracerTargetName, EndPoint);
+			//UE_LOG(LogTemp, Warning, TEXT("Tracing Effects:%s"), *HitScanTrace.TraceTo.ToString())
+			DrawDebugLine(this->GetWorld(), MuzzleLocation, EndPoint, FColor::Black, true, 10000, 10.f);
+		}
+
+	}
+
+	HitScanTrace.TraceTo = TraceTo;
+	UE_LOG(LogTemp, Warning, TEXT("Trace:%s"), *TraceTo.ToString())
+		HitScanTrace.SurfaceType = UPhysicalMaterial::DetermineSurfaceType(Impact.PhysMaterial.Get());
+	PlayWeaponSound(FireSound);
+	PlayFireEffects(EndTrace);
+	PlayImpactEffects(HitScanTrace.SurfaceType, TraceTo);
+	/*if(Role==ROLE_Authority)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("OnREp"))
+		HitScanTrace.TraceTo = TraceTo;
+		HitScanTrace.SurfaceType= UPhysicalMaterial::DetermineSurfaceType(Impact.PhysMaterial.Get());
+	}*/
 }
 
 void ADWeapon::ProcessInstantHit(const FHitResult& Impact, const FVector& Origin, const FVector& ShootDir,
@@ -160,68 +279,6 @@ void ADWeapon::ProcessInstantHit(const FHitResult& Impact, const FVector& Origin
 	}
 }
 
-void ADWeapon::Instant_Fire()
-{
-	const int32 RandomSeed = FMath::Rand();
-	FRandomStream WeaponRandomStream(RandomSeed);
-	const float CurrentSpread = WeaponConfig.WeaponSpread;
-	const float SpreadCone = FMath::DegreesToRadians(WeaponConfig.WeaponSpread * 0.5);
-	FRotator AimDirc;
-	FVector StartTrace;
-	GetOwner()->GetActorEyesViewPoint(StartTrace,AimDirc);
-	//AimDirc.Pitch -= 90;
-	FVector AimDir = AimDirc.Vector();
-	const FVector ShootDir = WeaponRandomStream.VRandCone(AimDir, SpreadCone, SpreadCone);
-	const FVector EndTrace = StartTrace + ShootDir * WeaponConfig.WeaponRange;
-
-	FVector TraceTo = EndTrace;
-
-	//UE_LOG(LogTemp, Warning, TEXT("Aim Dir : % s\nStart Tarce : % s\nShoot dir : % s\nEndTarce : % s"), *AimDir.ToString(),*StartTrace.ToString(),*ShootDir.ToString(),*EndTrace.ToString())
-	
-	static FName WeaponFireTag = FName(TEXT("WeaponTrace"));
-
-	FCollisionQueryParams TraceParams(WeaponFireTag, true, Instigator);
-	//TraceParams.bTraceAsyncScene = true;
-	TraceParams.bReturnPhysicalMaterial = true;
-	TraceParams.AddIgnoredActor(this);
-
-	FHitResult Hit(ForceInit);
-	FHitResult Impact;
-	if (GetWorld()->LineTraceSingleByChannel(Hit, StartTrace, EndTrace, COLLISION_WEAPON, TraceParams))
-	{
-		Impact = Hit;
-		TraceTo = Impact.ImpactPoint;
-		ProcessInstantHit(Impact, StartTrace, ShootDir, RandomSeed, CurrentSpread);
-
-	}
-	if (WeaponConfig.TracerEffect)
-	{
-		FVector MuzzleLocation = MeshComp->GetSocketLocation(WeaponConfig.MuzzleSocketName);
-
-		UParticleSystemComponent* TracerComp = UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), WeaponConfig.TracerEffect, MuzzleLocation);
-		if (TracerComp)
-		{
-			const FVector EndPoint = Impact.GetActor() ? Impact.ImpactPoint : EndTrace;
-			TracerComp->SetVectorParameter(WeaponConfig.TracerTargetName, EndPoint);
-			//UE_LOG(LogTemp, Warning, TEXT("Tracing Effects:%s"), *HitScanTrace.TraceTo.ToString())
-			DrawDebugLine(this->GetWorld(), MuzzleLocation, EndPoint, FColor::Black, true, 10000, 10.f);
-		}
-
-	}
-	
-	HitScanTrace.TraceTo = TraceTo;
-	UE_LOG(LogTemp, Warning, TEXT("Trace:%s"), *TraceTo.ToString())
-	HitScanTrace.SurfaceType = UPhysicalMaterial::DetermineSurfaceType(Impact.PhysMaterial.Get());
-	PlayWeaponSound(FireSound);
-	PlayFireEffects(EndTrace);
-	PlayImpactEffects(HitScanTrace.SurfaceType,TraceTo);
-	/*if(Role==ROLE_Authority)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("OnREp"))
-		HitScanTrace.TraceTo = TraceTo;
-		HitScanTrace.SurfaceType= UPhysicalMaterial::DetermineSurfaceType(Impact.PhysMaterial.Get());
-	}*/
-}
 
 
 UAudioComponent* ADWeapon::PlayWeaponSound(USoundCue* Sound)
@@ -305,59 +362,6 @@ void ADWeapon::SetOwningPawn(ADCharacter* NewOwner)
 	}
 }
 
-void ADWeapon::Fire()
-{
-	if(Role<ROLE_Authority)
-	{
-		ServerFire();
-		return;
-	}
-	//GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, TEXT("Fire called"));
-	if (ProjectileType == EWeaponProjectile::EBullet)
-	{
-		if (CurrentClip > 0)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, TEXT("Bullet"));
-			Instant_Fire();
-			PlayWeaponSound(FireSound);
-			CurrentClip -= WeaponConfig.ShotCost;
-		}
-		else
-		{
-			ReloadWeapon();
-		}
-	}
-	if (ProjectileType == EWeaponProjectile::ESpread)
-	{
-		if (CurrentClip > 0)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, TEXT("Spread"));
-			for (int32 i = 0; i <= WeaponConfig.WeaponSpread; i++)
-			{
-				Instant_Fire();
-			}
-			PlayWeaponSound(FireSound);
-			CurrentClip -= WeaponConfig.ShotCost;
-		}
-		else
-		{
-			ReloadWeapon();
-		}
-	}
-	if (ProjectileType == EWeaponProjectile::EProjectile)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, TEXT("Projection"));
-		if (CurrentClip > 0)
-		{
-			ProjectileFire();
-			CurrentClip -= WeaponConfig.ShotCost;
-		}
-		else
-		{
-			ReloadWeapon();
-		}
-	}LastFireTime = GetWorld()->TimeSeconds;
-}
 
 void ADWeapon::OnRep_HitScanTrace()
 {
